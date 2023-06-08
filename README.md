@@ -3,6 +3,7 @@
 ## LinkedIn Job Scraper
 
 This is a Python application that scrapes job postings from LinkedIn and stores them in a SQLite database. The application also provides a web interface to view the job postings and mark them as applied or hidden.
+![Screenshot image](./screenshot/screenshot.png)
 
 ### IMPORTANT NOTE
 
