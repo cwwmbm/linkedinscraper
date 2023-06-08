@@ -22,7 +22,7 @@ If you are using this application, please be aware that LinkedIn does not allow 
 
 1. Clone the repository to your local machine.
 2. Install the required packages using pip: `pip install -r requirements.txt`
-3. Create a `config.json` file in the root directory of the project. See the `config.json` section below for details on the configuration options.
+3. Create a `config.json` file in the root directory of the project. See the `config.json` section below for details on the configuration options. Config_example.json is provided as an example, feel free to use it as a template.
 4. Run the application using the command `python app.py`.
 5. Open a web browser and navigate to `http://localhost:5000` to view the job postings.
 
