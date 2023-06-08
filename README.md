@@ -43,6 +43,8 @@ python main.py
 
 The web interface is implemented using Flask in `app.py`. It provides a simple interface to view the job postings stored in the SQLite database. Users can mark job postings as applied or hidden, and the changes will be saved in the database.
 
+When the job is marked as "applied" it will be highlighted in light blue so that it's obvious at a glance which jobs are applied to. Upon clicking "Hide" the job will dissappear from the list. There's currently no functionality to unhide or un-apply. To reverse it you'd have to go to the database and change values in applied and hidden columns.
+
 To run the web interface, execute the following command:
 
 ```
