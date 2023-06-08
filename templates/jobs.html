@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Jobs List</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+            }
+            .row {
+                display: flex;
+            }
+            .column {
+                padding: 10px;
+                box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+                transition: 0.3s;
+                border-radius: 5px; /* 5px rounded corners */
+            }
+            .column:first-child {
+                flex: 25%;
+                margin-right: 20px;
+                max-height: 100vh;
+                overflow-y: auto;
+            }
+            .column:last-child {
+                flex: 75%;
+            }
+            #job-details {
+                position: sticky;
+                top: 0;
+                max-height: calc(100vh - 60px);
+                overflow-y: auto;
+            }
+            .column h2 {
+                color: #4CAF50; /* Green */
+                text-align: center;
+            }
+            .job-item {
+                padding: 10px;
+                margin-bottom: 15px;
+                background-color: #f8f8f8;
+                border-radius: 5px;
+                text-decoration: none;
+                color: black;
+                display: block;
+            }
+            .job-item:hover {
+                background-color: #e8e8e8;
+                cursor: pointer;
+            }
+            .job-content h3, .job-content p {
+                color: black;
+                margin: 0;
+            }
+            .job-url a {
+                background-color: #4CAF50;
+                color: white;
+                padding: 10px 24px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border: none;
+                border-radius: 5px;
+            }
+            .job-description {
+                white-space: pre-line;
+            }
+            .job-item.job-item-selected {
+                background-color: #e8ffe8;
+            }
+            .button-container {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+            }
+            .job-item-applied {
+                background-color: #7ebeba;
+            }
+            .job-button {
+                background-color: #4CAF50; /* Green */
+                color: white;
+                padding: 10px 24px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 4px 2px;
+                cursor: pointer;
+                border: none;
+                border-radius: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="row">
+            <div class="column">
+                <!-- Display the list of jobs -->
+                <h2>Jobs List</h2>
+                
+                {% for job in jobs %}
+                <a class="{% if job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}" href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
+                    <div class="job-content">
+                        <h3>{{ job.title }}</h3>
+                        <p>{{ job.company }}, {{ job.location }}</p>
+                        <p>{{ job.date }}</p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="column">
+                <!-- Placeholder for job details -->
+                <h2>Job Details</h2>
+                <div id="job-details">
+                    <!-- Job details will be inserted here -->
+                </div>
+            </div>
+        </div>
+        <script src="/static/job_actions.js"></script>
+    </body>
+    
+</html>

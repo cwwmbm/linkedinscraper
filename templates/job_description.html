@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Job Details</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+            }
+            .job-description-container {
+                padding: 10px;
+                box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+                transition: 0.3s;
+                border-radius: 5px; /* 5px rounded corners */
+                width: 75%;
+            }
+            .job-description-container h1, h2 {
+                color: #4CAF50; /* Green */
+            }
+            .job-description-container p {
+                margin-bottom: 15px;
+            }
+            .job-description-container a {
+                text-decoration: none;
+                color: #4CAF50;
+            }
+            .job-description-container a:hover {
+                text-decoration: underline;
+            }
+            .job-description-container button {
+                padding: 10px 15px;
+                background-color: #4CAF50;
+                border: none;
+                color: white;
+                text-transform: uppercase;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-top: 10px;
+            }
+            .job-description-container button:hover {
+                background-color: #45a049;
+            }
+        </style>
+    </head>
+    <body data-job-id="{{ job.id }}">
+        <h1>Test Page</h1>
+        <button id="apply-button">Applied</button>
+        <button id="hide-button">Hide</button>
+    </body>
+</html>
