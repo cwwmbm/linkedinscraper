@@ -56,15 +56,21 @@ Then, open a web browser and navigate to `http://localhost:5000` to view the job
 The `config.json` file contains the configuration options for the scraper and the web interface. Below is a description of each option:
 
 - `proxies`: The proxy settings for the requests library. Set the `http` and `https` keys with the appropriate proxy URLs.
-- `headers`: The headers to be sent with the requests. Set the `User-Agent` key with a valid user agent string.
+- `headers`: The headers to be sent with the requests. Set the `User-Agent` key with a valid user agent string. If you don't know your user agen, google "my user agent" and it will show it.
 - `search_queries`: An array of search query objects, each containing the following keys:
   - `keywords`: The keywords to search for in the job title.
   - `location`: The location to search for jobs.
-  - `f_WT`: The job type filter (e.g., full-time, part-time, etc.).
+  - `f_WT`: The job type filter. Values are as follows:
+        -  0 - onsite
+        -  1 - hybrid
+        -  2 - remote
+        -  empty (no value) - any one of the above.
 - `desc_words`: An array of keywords to filter out job postings based on their description.
-- `title_only`: A boolean value indicating whether to filter job postings based on the title only.
-- `title_words`: An array of keywords to filter job postings based on their title.
-- `timespan`: The time range for the job postings (e.g., "r604800" for the past week).
+- `title_only`: boolean (true/false) value that controls how job filtering is done:
+  -  true: ONLY jobs that have at least one of the words from 'title_words' in its title will be considered, the rest will be discarded
+  -  false: jobs that have ANY of the word from 'title_words' will be discarded, the rest will be scraped.
+- `title_words`: An array of keywords to filter job postings based on their title and based on 'title_only' value.
+- `timespan`: The time range for the job postings. "r604800" for the past week, "r84600" for the last 24 hours. Basically "r" plus 60 * 60 * 24 * <number of days>.
 - `jobs_tablename`: The name of the table in the SQLite database where the job postings will be stored.
 - `filtered_jobs_tablename`: The name of the table in the SQLite database where the filtered job postings will be stored.
 - `db_path`: The path to the SQLite database file.
