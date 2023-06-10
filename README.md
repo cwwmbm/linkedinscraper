@@ -1,9 +1,11 @@
-# README.md
-
 ## LinkedIn Job Scraper
 
 This is a Python application that scrapes job postings from LinkedIn and stores them in a SQLite database. The application also provides a web interface to view the job postings and mark them as applied or hidden.
 ![Screenshot image](./screenshot/screenshot.png)
+
+### Problem
+
+If you spent any amount of time looking for jobs on LinkedIn you know how frustrating it is. The same job postings keep showing up in your search results, and you have to scroll through pages and pages of irrelevant job postings to find the ones that are relevant to you, only to see the ones you applied for weeks ago. This application aims to solve this problem by scraping job postings from LinkedIn and storing them in a SQLite database. You can filter out job postings based on keywords in Title and Description (tired of seeing Clinical QA Manager when you search for software QA jobs? Just filter out jobs that have "clinical" in the title). The jobs are sorted by date posted, not by what LinkedIn thinks is relevant to you. No sponsored job posts. No duplicate job posts. No irrelevant job posts. Just the jobs you want to see.
 
 ### IMPORTANT NOTE
 
@@ -78,6 +80,13 @@ The `config.json` file contains the configuration options for the scraper and th
 - `filtered_jobs_tablename`: The name of the table in the SQLite database where the filtered job postings will be stored.
 - `db_path`: The path to the SQLite database file.
 - `pages_to_scrape`: The number of pages to scrape for each search query.
+
+### What remains to be done
+
+- [ ] Add functionality to unhide and un-apply jobs.
+- [ ] Add functionality to sort jobs by date added to the databse. Current sorting is by date posted on LinkedIn. Some jobs (~1-5%) are not being picked up by the search (and as such this scraper) until days after they are posted. This is a known issue with LinkedIn and there's nothing I can do about it, however sorting jobs by dated added to the database will make it easier to find those jobs.
+- [ ] Add front end functionality to configure search, and execute that search from UI. Currently configuration is done in json file and search is executed from command line.
+
 
 ### Contributing
 
