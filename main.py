@@ -136,9 +136,56 @@ def create_connection(config):
     return conn
 
 def create_table(conn, df, table_name):
+    ''''
     # Create a new table with the data from the dataframe
     df.to_sql(table_name, conn, if_exists='replace', index=False)
     print (f"Created the {table_name} table and added {len(df)} records")
+    '''
+    # Create a new table with the data from the DataFrame
+    # Prepare data types mapping from pandas to SQLite
+    type_mapping = {
+        'int64': 'INTEGER',
+        'float64': 'REAL',
+        'datetime64[ns]': 'TIMESTAMP',
+        'object': 'TEXT',
+        'bool': 'INTEGER'
+    }
+    
+    # Prepare a string with column names and their types
+    columns_with_types = ', '.join(
+        f'"{column}" {type_mapping[str(df.dtypes[column])]}'
+        for column in df.columns
+    )
+    
+    # Prepare SQL query to create a new table
+    create_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS "{table_name}" (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            {columns_with_types}
+        );
+    """
+    
+    # Execute SQL query
+    cursor = conn.cursor()
+    cursor.execute(create_table_sql)
+    
+    # Commit the transaction
+    conn.commit()
+
+    # Insert DataFrame records one by one
+    insert_sql = f"""
+        INSERT INTO "{table_name}" ({', '.join(f'"{column}"' for column in df.columns)})
+        VALUES ({', '.join(['?' for _ in df.columns])})
+    """
+    for record in df.to_dict(orient='records'):
+        cursor.execute(insert_sql, list(record.values()))
+    
+    # Commit the transaction
+    conn.commit()
+
+    print(f"Created the {table_name} table and added {len(df)} records")
+
+
 
 def update_table(conn, df, table_name):
     # Update the existing table with new records.
@@ -180,6 +227,7 @@ def get_jobcards(config):
             jobs = transform(soup)
             all_jobs = all_jobs + jobs
             print("Finished scraping page: ", url)
+        break
     print ("Total job cards scraped: ", len(all_jobs))
     all_jobs = remove_duplicates(all_jobs, config)
     print ("Total job cards after removing duplicates: ", len(all_jobs))

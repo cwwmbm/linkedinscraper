@@ -7,3 +7,4 @@ __pycache__/
 my_env/
 data/my_database.db
 csv_to_db.py
+data/*.db
