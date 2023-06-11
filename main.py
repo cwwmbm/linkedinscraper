@@ -227,7 +227,6 @@ def get_jobcards(config):
             jobs = transform(soup)
             all_jobs = all_jobs + jobs
             print("Finished scraping page: ", url)
-        break
     print ("Total job cards scraped: ", len(all_jobs))
     all_jobs = remove_duplicates(all_jobs, config)
     print ("Total job cards after removing duplicates: ", len(all_jobs))
