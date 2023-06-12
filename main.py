@@ -192,7 +192,7 @@ def update_table(conn, df, table_name):
     df_existing = pd.read_sql(f'select * from {table_name}', conn)
 
     # Create a dataframe with unique records in df that are not in df_existing
-    df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company'], keep=False)
+    df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company', 'date'], keep=False)
 
     # If there are new records, append them to the existing table
     if len(df_new_records) > 0:
