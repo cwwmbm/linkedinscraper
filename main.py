@@ -213,7 +213,7 @@ def job_exists(df, job):
     # Check if the job already exists in the dataframe
     if df.empty:
         return False
-    return ((df['title'] == job['title']) & (df['company'] == job['company'])).any()
+    return ((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()
 
 def get_jobcards(config):
     #Function to get the job cards from the search results page
