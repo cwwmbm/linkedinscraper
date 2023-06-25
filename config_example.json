@@ -21,6 +21,7 @@
     "jobs_tablename": "jobs",
     "filtered_jobs_tablename": "filtered_jobs",
     "db_path": "./data/my_database.db",
-    "pages_to_scrape": 8
+    "pages_to_scrape": 8,
+    "rounds": 1
   }
   
