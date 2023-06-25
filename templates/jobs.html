@@ -79,6 +79,12 @@
             .job-item-applied {
                 background-color: #c7f3ff;
             }
+            .job-item-interview {
+                background-color: #c7ffc7;
+            }
+            .job-item-rejected {
+                background-color: #ffc7c7;
+            }
             .job-button {
                 background-color: #4CAF50; /* Green */
                 color: white;
@@ -101,12 +107,19 @@
                 <h2>Jobs List</h2>
                 
                 {% for job in jobs %}
-                <a class="{% if job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}" href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
+                <a class="{% if job.rejected == 1 %}job-item job-item-rejected{% elif job.interview == 1 %}job-item job-item-interview{% elif job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}"  href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
+                <!--<a class="{% if job.rejected == 1 %}job-item job-item-rejected{% elif job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}" href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">-->
                     <div class="job-content">
                         <h3>{{ job.title }}</h3>
                         <p>{{ job.company }}, {{ job.location }}</p>
                         <p>{{ job.date }}</p>
                     </div>
+                <!--<a class="{% if job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}" href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
+                    <div class="job-content">
+                        <h3>{{ job.title }}</h3>
+                        <p>{{ job.company }}, {{ job.location }}</p>
+                        <p>{{ job.date }}</p>
+                    </div>-->
                 </a>
                 {% endfor %}
             </div>

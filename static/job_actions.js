@@ -24,6 +24,8 @@ function updateJobDetails(job) {
     html += '<div class="button-container" style="text-align:center">';
     html += '<a href="' + job.job_url + '" class="job-button">Go to job</a>';
     html += '<button class="job-button" onclick="markAsApplied(' + job.id + ')">Applied</button>';
+    html += '<button class="job-button" onclick="markAsRejected(' + job.id + ')">Rejected</button>';
+    html += '<button class="job-button" onclick="markAsInterview(' + job.id + ')">Interview</button>';
     html += '<button class="job-button" onclick="hideJob(' + job.id + ')">Hide</button>';
     html += '</div>';
 
@@ -44,7 +46,18 @@ function markAsApplied(jobId) {
         });
 }
 
-
+function markAsRejected(jobId) {
+    console.log('Marking job as rejected: ' + jobId)
+    fetch('/mark_rejected/' + jobId, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);  // Log the response
+            if (data.success) {
+                var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
+                jobCard.classList.add('job-item-rejected');
+            }
+        });
+}
 
 function hideJob(jobId) {
     fetch('/hide_job/' + jobId, { method: 'POST' })
@@ -61,4 +74,16 @@ function hideJob(jobId) {
         });
 }
 
+function markAsInterview(jobId) {
+    console.log('Marking job as interview: ' + jobId)
+    fetch('/mark_interview/' + jobId, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);  // Log the response
+            if (data.success) {
+                var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
+                jobCard.classList.add('job-item-interview');
+            }
+        });
+}
 

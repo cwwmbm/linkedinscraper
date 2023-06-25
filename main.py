@@ -218,15 +218,16 @@ def job_exists(df, job):
 def get_jobcards(config):
     #Function to get the job cards from the search results page
     all_jobs = []
-    for query in config['search_queries']:
-        keywords = quote(query['keywords']) # URL encode the keywords
-        location = quote(query['location']) # URL encode the location
-        for i in range (0, config['pages_to_scrape']):
-            url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={25*i}"
-            soup = get_with_retry(url, config)
-            jobs = transform(soup)
-            all_jobs = all_jobs + jobs
-            print("Finished scraping page: ", url)
+    for k in range(0, config['rounds']):
+        for query in config['search_queries']:
+            keywords = quote(query['keywords']) # URL encode the keywords
+            location = quote(query['location']) # URL encode the location
+            for i in range (0, config['pages_to_scrape']):
+                url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={25*i}"
+                soup = get_with_retry(url, config)
+                jobs = transform(soup)
+                all_jobs = all_jobs + jobs
+                print("Finished scraping page: ", url)
     print ("Total job cards scraped: ", len(all_jobs))
     all_jobs = remove_duplicates(all_jobs, config)
     print ("Total job cards after removing duplicates: ", len(all_jobs))

@@ -1,6 +1,6 @@
 ## LinkedIn Job Scraper
 
-This is a Python application that scrapes job postings from LinkedIn and stores them in a SQLite database. The application also provides a web interface to view the job postings and mark them as applied or hidden.
+This is a Python application that scrapes job postings from LinkedIn and stores them in a SQLite database. The application also provides a web interface to view the job postings and mark them as applied, rejected,interview, and hidden.
 ![Screenshot image](./screenshot/screenshot.png)
 
 ### Problem
@@ -44,9 +44,9 @@ python main.py
 
 #### Web Interface
 
-The web interface is implemented using Flask in `app.py`. It provides a simple interface to view the job postings stored in the SQLite database. Users can mark job postings as applied or hidden, and the changes will be saved in the database.
+The web interface is implemented using Flask in `app.py`. It provides a simple interface to view the job postings stored in the SQLite database. Users can mark job postings as applied, rejected, interview, or hidden, and the changes will be saved in the database.
 
-When the job is marked as "applied" it will be highlighted in light blue so that it's obvious at a glance which jobs are applied to. Upon clicking "Hide" the job will dissappear from the list. There's currently no functionality to unhide or un-apply. To reverse it you'd have to go to the database and change values in applied and hidden columns.
+When the job is marked as "applied" it will be highlighted in light blue so that it's obvious at a glance which jobs are applied to. "Rejecetd" will mark the job in red, whereas "Interview" will mark the job in green. Upon clicking "Hide" the job will dissappear from the list. There's currently no functionality to reverse these actions (i.e. unhine, un-apply, etc). To reverse it you'd have to go to the database and change values in applied, hidden, interview, or rejected columns.
 
 To run the web interface, execute the following command:
 
@@ -80,6 +80,7 @@ The `config.json` file contains the configuration options for the scraper and th
 - `filtered_jobs_tablename`: The name of the table in the SQLite database where the filtered job postings will be stored.
 - `db_path`: The path to the SQLite database file.
 - `pages_to_scrape`: The number of pages to scrape for each search query.
+- `rounds`: The number of times to run the scraper. LinkedIn doesn't always show the same results for the same search query, so running the scraper multiple times will increase the number of job postings scraped. I usually do 3 rounds in the morning and then 1 round every 2-3 hours throughout the day.
 
 ### What remains to be done
 

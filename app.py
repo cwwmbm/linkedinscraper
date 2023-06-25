@@ -53,6 +53,29 @@ def mark_applied(job_id):
     conn.close()
     return jsonify({"success": "Job marked as applied"}), 200
 
+@app.route('/mark_interview/<int:job_id>', methods=['POST'])
+def mark_interview(job_id):
+    print("Interview clicked!")
+    conn = sqlite3.connect('./data/my_database.db')
+    cursor = conn.cursor()
+    query = "UPDATE jobs SET interview = 1 WHERE id = ?"
+    print(f'Executing query: {query} with job_id: {job_id}')
+    cursor.execute(query, (job_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": "Job marked as interview"}), 200
+
+@app.route('/mark_rejected/<int:job_id>', methods=['POST'])
+def mark_rejected(job_id):
+    print("Rejected clicked!")
+    conn = sqlite3.connect('./data/my_database.db')
+    cursor = conn.cursor()
+    query = "UPDATE jobs SET rejected = 1 WHERE id = ?"
+    print(f'Executing query: {query} with job_id: {job_id}')
+    cursor.execute(query, (job_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": "Job marked as rejected"}), 200
 
 def read_jobs_from_db():
     conn = sqlite3.connect('./data/my_database.db')
