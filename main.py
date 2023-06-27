@@ -3,9 +3,9 @@ import json
 import sqlite3
 from sqlite3 import Error
 from bs4 import BeautifulSoup
-import time
+import time as tm
 from itertools import groupby
-from datetime import datetime
+from datetime import datetime, timedelta, time
 import pandas as pd
 from urllib.parse import quote
 
@@ -26,7 +26,7 @@ def get_with_retry(url, config, retries=3, delay=1):
             return BeautifulSoup(r.content, 'html.parser')
         except requests.exceptions.Timeout:
             print(f"Timeout occurred for URL: {url}, retrying in {delay}s...")
-            time.sleep(delay)
+            tm.sleep(delay)
         except Exception as e:
             print(f"An error occurred while retrieving the URL: {url}, error: {e}")
     return None
@@ -253,7 +253,7 @@ def find_new_jobs(all_jobs, conn, config):
     return new_joblist
 
 def main():
-    start_time = time.perf_counter()
+    start_time = tm.perf_counter()
     job_list = []
 
     config = load_config('config.json')
@@ -270,6 +270,10 @@ def main():
 
         for job in all_jobs:
             job_date = convert_date_format(job['date'])
+            job_date = datetime.combine(job_date, time())
+            #if job is older than a week, skip it
+            if job_date < datetime.now() - timedelta(days=config['days_to_scrape']):
+                continue
             print('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
             desc_soup = get_with_retry(job['job_url'], config)
             job['job_description'] = transform_job(desc_soup)
@@ -307,7 +311,7 @@ def main():
     else:
         print("No jobs found")
     
-    end_time = time.perf_counter()
+    end_time = tm.perf_counter()
     print(f"Scraping finished in {end_time - start_time:.2f} seconds")
 
 

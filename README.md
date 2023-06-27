@@ -81,6 +81,7 @@ The `config.json` file contains the configuration options for the scraper and th
 - `db_path`: The path to the SQLite database file.
 - `pages_to_scrape`: The number of pages to scrape for each search query.
 - `rounds`: The number of times to run the scraper. LinkedIn doesn't always show the same results for the same search query, so running the scraper multiple times will increase the number of job postings scraped. I usually do 3 rounds in the morning and then 1 round every 2-3 hours throughout the day.
+- `days_toscrape`: The number of days to scrape. The scraper will ignore job postings older than this number of days.
 
 ### What remains to be done
 
