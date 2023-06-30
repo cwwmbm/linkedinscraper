@@ -62,7 +62,9 @@ def transform(soup):
             'job_url': job_url,
             'job_description': job_description,
             'applied': 0,
-            'hidden': 0
+            'hidden': 0,
+            'interview': 0,
+            'rejected': 0
         }
         joblist.append(job)
     return joblist
@@ -298,8 +300,7 @@ def main():
         df['date_loaded'] = datetime.now()
         df_filtered['date_loaded'] = datetime.now()
         df['date_loaded'] = df['date_loaded'].astype(str)
-        df_filtered['date_loaded'] = df_filtered['date_loaded'].astype(str)
-
+        df_filtered['date_loaded'] = df_filtered['date_loaded'].astype(str)        
         
         if conn is not None:
             #Update or Create the database table for the job list
