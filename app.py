@@ -9,7 +9,7 @@ def load_config(file_name):
     with open(file_name) as f:
         return json.load(f)
 
-db = load_config('config1.json')['db_path']
+db = load_config('config.json')['db_path']
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
