@@ -8,6 +8,8 @@ from itertools import groupby
 from datetime import datetime, timedelta, time
 import pandas as pd
 from urllib.parse import quote
+from langdetect import detect
+from langdetect.lang_detect_exception import LangDetectException
 
 
 def load_config(file_name):
@@ -86,17 +88,19 @@ def transform_job(soup):
     else:
         return "Could not find Job Description"
 
-def remove_irrelevant_jobs(joblist, config):
-    # Removes irrelevant jobs from the list. Irrelevant is defined as:
-    # 1. Having any of the words in the config['desc_words'] list in the job description.
-    # 2. If config['title_include'] is False, then exclude jobs that have any of the words in the config['title_words'] list in the title.
-    # 3. If config['title_include'] is True, then include only jobs that have any of the words in the config['title_words'] list in the title.
+def safe_detect(text):
+    try:
+        return detect(text)
+    except LangDetectException:
+        return 'en'
 
+def remove_irrelevant_jobs(joblist, config):
+    #Filter out jobs based on description, title, and language. Set up in config.json.
     new_joblist = [job for job in joblist if not any(word.lower() in job['job_description'].lower() for word in config['desc_words'])]   
-    if not config['title_include']:
-        new_joblist = [job for job in new_joblist if not any(word.lower() in job['title'].lower() for word in config['title_words'])]
-    else:
-        new_joblist = [job for job in new_joblist if any(word.lower() in job['title'].lower() for word in config['title_words'])]
+    new_joblist = [job for job in new_joblist if not any(word.lower() in job['title'].lower() for word in config['title_exclude'])] if len(config['title_exclude']) > 0 else new_joblist
+    new_joblist = [job for job in new_joblist if any(word.lower() in job['title'].lower() for word in config['title_include'])] if len(config['title_include']) > 0 else new_joblist
+    new_joblist = [job for job in new_joblist if safe_detect(job['job_description']) in config['languages']] if len(config['languages']) > 0 else new_joblist
+
     return new_joblist
 
 def remove_duplicates(joblist, config):
@@ -213,7 +217,9 @@ def job_exists(df, job):
     # Check if the job already exists in the dataframe
     if df.empty:
         return False
-    return ((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()
+    #return ((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()
+    #The job exists if there's already a job in the database that has the same URL
+    return ((df['job_url'] == job['job_url']).any() | (((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()))
 
 def get_jobcards(config):
     #Function to get the job cards from the search results page
@@ -277,6 +283,10 @@ def main():
             print('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
             desc_soup = get_with_retry(job['job_url'], config)
             job['job_description'] = transform_job(desc_soup)
+            language = detect(job['job_description'])
+            if language not in config['languages']:
+                print('Job description language not supported: ', language)
+                #continue
             job_list.append(job)
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)

@@ -4,3 +4,4 @@ beautifulsoup4
 pandas
 sqlite3
 json
+langdetect
