@@ -1,27 +1,30 @@
 {
-    "proxies": {
-      "http": "your proxy here",
-      "https": "your proxy here"
-    },
-    "headers": {
-      "User-Agent": "your use agent"
-    },
-    "search_queries": [
-      {"keywords": "python developer", "location": "Los Angeles", "f_WT": ""},
-      {"keywords": "python developer", "location": "United States", "f_WT": "2"}
-    ],
-    "desc_words": [
-      "agriculture", "food safety", "Bilingual"
-    ],
-    "title_include": true,
-    "title_words": [
-      "python", "developer", "engineer", "architect"
-    ],
-    "timespan": "r604800",
-    "jobs_tablename": "jobs",
-    "filtered_jobs_tablename": "filtered_jobs",
-    "db_path": "./data/my_database.db",
-    "pages_to_scrape": 8,
-    "rounds": 1
+  "proxies": {
+
+  },
+  "headers": {
+
+  },
+  "search_queries": [    
+    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
+    {"keywords": "Python developer", "location": "USA", "f_WT": "2"}
+
+  ],
+  "desc_words": [
+    "agriculture", "farm", "food safety", "manufacture", "manufacturing", "Bilingual", "chemistry", "FDA", "ICH Guideline", "21 CFR 210",
+    "biological sciences", "clinical research", "clinical trials", "drug safety", "ISO 9001", "ISO9001", "Life Sciences", "Biotech", "safety standards", "gt.school", "degree in accounting", "degree in Finance", "ISQM", "ISQM1",
+    "QA/QC", "Electrical Engineering", "IS09001"
+  ],
+  "title_exclude": ["frontend", "fron end", "game"],
+  "title_include": ["python", "developer", "backend", "BE", "engineer"],
+  "languages": ["en"],
+  "timespan": "r84600",
+  "jobs_tablename": "jobs",
+  "filtered_jobs_tablename": "filtered_jobs",
+  "db_path": "./data/my_database.db",
+  "pages_to_scrape": 10,
+  "rounds": 1,
+  "days_to_scrape": 10,
+  "app_table": "jobs"
   }
   
