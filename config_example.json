@@ -17,6 +17,7 @@
   ],
   "title_exclude": ["frontend", "fron end", "game"],
   "title_include": ["python", "developer", "backend", "BE", "engineer"],
+  "company_exclude": ["ClickJobs.io"],
   "languages": ["en"],
   "timespan": "r84600",
   "jobs_tablename": "jobs",

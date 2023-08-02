@@ -1,6 +1,7 @@
 import requests
 import json
 import sqlite3
+import sys
 from sqlite3 import Error
 from bs4 import BeautifulSoup
 import time as tm
@@ -192,8 +193,6 @@ def create_table(conn, df, table_name):
 
     print(f"Created the {table_name} table and added {len(df)} records")
 
-
-
 def update_table(conn, df, table_name):
     # Update the existing table with new records.
     df_existing = pd.read_sql(f'select * from {table_name}', conn)
@@ -261,11 +260,11 @@ def find_new_jobs(all_jobs, conn, config):
     new_joblist = [job for job in all_jobs if not job_exists(jobs_db, job) and not job_exists(filtered_jobs_db, job)]
     return new_joblist
 
-def main():
+def main(config_file):
     start_time = tm.perf_counter()
     job_list = []
 
-    config = load_config('config.json')
+    config = load_config(config_file)
     jobs_tablename = config['jobs_tablename'] # name of the table to store the "approved" jobs
     filtered_jobs_tablename = config['filtered_jobs_tablename'] # name of the table to store the jobs that have been filtered out based on description keywords (so that in future they are not scraped again)
     #Scrape search results page and get job cards. This step might take a while based on the number of pages and search queries.
@@ -328,4 +327,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    config_file = 'config.json'  # default config file
+    if len(sys.argv) == 2:
+        config_file = sys.argv[1]
+        
+    main(config_file)
