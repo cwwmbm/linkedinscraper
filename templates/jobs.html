@@ -98,6 +98,30 @@
                 border: none;
                 border-radius: 5px;
             }
+            #job-details-wrapper {
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 60px); /* Adjust the height if necessary */
+            }
+
+            #job-details {
+                position: relative;
+                overflow-y: auto;
+                flex-grow: 1;
+                height: 70%;
+            }
+
+            #resizer {
+                height: 5px;  /* Height of the resizer */
+                background: #ccc;
+                cursor: row-resize;
+            }
+
+            #bottom-pane {
+                overflow-y: auto;
+                flex-grow: 1;
+                height: calc(30% - 5px); /* Height of the bottom pane */
+            }
         </style>
     </head>
     <body>
@@ -121,6 +145,14 @@
                 <h2>Job Details</h2>
                 <div id="job-details">
                     <!-- Job details will be inserted here -->
+                </div>
+                <div id="resizer"></div>
+                <h2>Cover Letter</h2>
+                <div id="bottom-pane">
+                    <div id="cover-letter-pane">
+                        <!-- Cover letter will be inserted here -->
+                    </div>
+                    <!-- Bottom pane content goes here -->
                 </div>
             </div>
         </div>

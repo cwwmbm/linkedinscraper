@@ -12,3 +12,4 @@ data/*.db
 indeed.py
 *.sh
 *.log
+SupabaseUpload/

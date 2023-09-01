@@ -6,3 +6,5 @@ sqlite3
 json
 langdetect
 pysocks
+openai
+pdfminer.six

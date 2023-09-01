@@ -5,6 +5,11 @@
   "headers": {
 
   },
+
+  "OpenAI_API_KEY": "",
+  "OpenAI_Model": "",
+  "resume_path": "full local path to your resume in PDF format",
+
   "search_queries": [    
     {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
     {"keywords": "Python developer", "location": "USA", "f_WT": "2"}

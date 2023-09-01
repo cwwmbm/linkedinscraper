@@ -1,3 +1,7 @@
+# UPDATE.
+
+New version includes OpenAI integration for cover letter generation. See below for how to configure config.json file.
+
 ## LinkedIn Job Scraper
 
 This is a Python application that scrapes job postings from LinkedIn and stores them in a SQLite database. The application also provides a web interface to view the job postings and mark them as applied, rejected,interview, and hidden.
@@ -64,6 +68,9 @@ The `config.json` file contains the configuration options for the scraper and th
 
 - `proxies`: The proxy settings for the requests library. Set the `http` and `https` keys with the appropriate proxy URLs.
 - `headers`: The headers to be sent with the requests. Set the `User-Agent` key with a valid user agent string. If you don't know your user agen, google "my user agent" and it will show it.
+- `OpenAI_API_KEY`: Your OpenAI API key. You can get it from your OpenAI dashboard.
+- `OpenAI_Model`: The name of the OpenAI model to use for cover letter generation. GPT-4 family of models produces best results, but also the most expensive one.
+- `resume_path`: Local path to your resume in PDF format (only PDF is supported at this time). For best results it's advised that your PDF resume is formatted in a way that's easy for the AI to parse. Use a single column format, avoid images. You may get unpredictable results if it's in a two-column format.
 - `search_queries`: An array of search query objects, each containing the following keys:
   - `keywords`: The keywords to search for in the job title.
   - `location`: The location to search for jobs.
