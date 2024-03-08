@@ -1,9 +1,8 @@
 Flask
+flask_cors
 requests
 beautifulsoup4
 pandas
-sqlite3
-json
 langdetect
 pysocks
 openai
