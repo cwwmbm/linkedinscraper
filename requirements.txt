@@ -2,9 +2,8 @@ Flask
 requests
 beautifulsoup4
 pandas
-sqlite3
-json
 langdetect
 pysocks
 openai
 pdfminer.six
+flask_cors
