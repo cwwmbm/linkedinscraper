@@ -1,8 +1,3 @@
-# UPDATE November 2023
-I've implemented a website version of this that doesn't require any script launches. https://jobbix.co
-![Screenshot image](./screenshot/jobbix_screenshot.png)
-
-
 # UPDATE August 2023.
 
 New version includes OpenAI integration for cover letter generation. See below for how to configure config.json file.
