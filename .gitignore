@@ -1,5 +1,5 @@
 # .gitignore
-venv/
+.venv/
 *.csv
 config.json
 config1.json

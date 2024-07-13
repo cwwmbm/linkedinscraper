@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+flask-cors = "*"
+requests = "*"
+beautifulsoup4 = "*"
+pandas = "*"
+langdetect = "*"
+pysocks = "*"
+openai = "*"
+"pdfminer.six" = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
