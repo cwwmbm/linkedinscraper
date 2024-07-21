@@ -79,6 +79,16 @@ The `config.json` file contains the configuration options for the scraper and th
         -  1 - hybrid
         -  2 - remote
         -  empty (no value) - any one of the above.
+  - `f_SB2`: The salary range for the job postings. Values are as follows:
+        -  1 - $40,000+
+        -  2 - $60,000+
+        -  3 - $80,000+
+        -  4 - $100,000+
+        -  5 - $120,000+
+        -  6 - $140,000+
+        -  7 - $160,000+
+        -  8 - $180,000+
+        -  9 - $200,000+
 - `desc_words`: An array of keywords to filter out job postings based on their description.
 - `title_include`: An array of keywords to filter job postings based on their title. Keep *only* jobs that have at least one of the words from 'title_words' in its title. Leave empty if you don't want to filter by title.
 - `title_exclude`: An array of keywords to filter job postings based on their title. Discard jobs that have ANY of the word from 'title_words' in its title. Leave empty if you don't want to filter by title.
