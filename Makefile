@@ -38,3 +38,5 @@ reset_db: create_db_dir
 	@$(MAKE) create_db
 	@echo "Database reset successfully."
 
+
+# Create command to create resume
