@@ -2,7 +2,14 @@ from flask import Flask, render_template, jsonify
 import pandas as pd
 import sqlite3
 import json
-import openai
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables from the .env file
+load_dotenv()  # Loads the .env file into your environment
+# Set the OpenAI API key
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 from pdfminer.high_level import extract_text
 from flask_cors import CORS
 
@@ -153,7 +160,6 @@ def get_resume(job_id):
         print("Error: OpenAI API key is empty.")
         return jsonify({"error": "OpenAI API key is empty."}), 400
 
-    openai.api_key = config["OpenAI_API_KEY"]
     consideration = ""
     user_prompt = ("You are a career coach with a client that is applying for a job as a " 
                    + job['title'] + " at " + job['company'] 
@@ -166,12 +172,10 @@ def get_resume(job_id):
         user_prompt += "\nConsider incorporating that " + consideration
 
     try:
-        completion = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+        completion = client.chat.completions.create(model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": user_prompt},
+        ])
         response = completion.choices[0].message.content
     except Exception as e:
         print(f"Error connecting to OpenAI: {e}")
@@ -192,12 +196,10 @@ def get_CoverLetter(job_id):
 
     def get_chat_gpt(prompt):
         try:
-            completion = openai.ChatCompletion.create(
-                model=config["OpenAI_Model"],
-                messages=[
-                    {"role": "user", "content": prompt},
-                ],
-            )
+            completion = client.chat.completions.create(model=config["OpenAI_Model"],
+            messages=[
+                {"role": "user", "content": prompt},
+            ])
             return completion.choices[0].message.content
         except Exception as e:
             print(f"Error connecting to OpenAI: {e}")
@@ -208,7 +210,7 @@ def get_CoverLetter(job_id):
     if job_tuple is not None:
         column_names = [column[0] for column in cursor.description]
         job = dict(zip(column_names, job_tuple))
-    
+
     resume = read_pdf(config["resume_path"])
 
     # Check if resume is None
@@ -221,7 +223,6 @@ def get_CoverLetter(job_id):
         print("Error: OpenAI API key is empty.")
         return jsonify({"error": "OpenAI API key is empty."}), 400
 
-    openai.api_key = config["OpenAI_API_KEY"]
     consideration = ""
     user_prompt = ("You are a career coach with over 15 years of experience helping job seekers land their dream jobs in tech. You are helping a candidate to write a cover letter for the below role. Approach this task in three steps. Step 1. Identify main challenges someone in this position would face day to day. Step 2. Write an attention grabbing hook for your cover letter that highlights your experience and qualifications in a way that shows you empathize and can successfully take on challenges of the role. Consider incorporating specific examples of how you tackled these challenges in your past work, and explore creative ways to express your enthusiasm for the opportunity. Put emphasis on how the candidate can contribute to company as opposed to just listing accomplishments. Keep your hook within 100 words or less. Step 3. Finish writing the cover letter based on the resume and keep it within 250 words. Respond with final cover letter only. \n job description: " + job['job_description'] + "\n company: " + job['company'] + "\n title: " + job['title'] + "\n resume: " + resume)
     if consideration:
