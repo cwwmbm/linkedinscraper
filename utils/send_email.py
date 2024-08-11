@@ -40,3 +40,8 @@ def send_email(subject, body, to_email):
 # Example usage
 send_email("Test Subject", "This is a test email", RECIPIENT_EMAIL)
 
+
+# TODO: add timestamp to email subject
+# TODO: add body text to email for list of jobs
+# TODO: add attachment to email for log file of run
+# TODO: add list of jobs to email
