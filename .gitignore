@@ -14,3 +14,4 @@ indeed.py
 *.log
 SupabaseUpload/
 *.env
+.DS_Store
