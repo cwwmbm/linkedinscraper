@@ -1,6 +1,7 @@
 import logging
 import re
 import os
+from typing import Tuple
 
 from docx import Document
 from dotenv import load_dotenv
@@ -14,17 +15,44 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def analyze_job(job):
-    if job['description'] is None:
-        return [False, "Job description is empty", None]
 
+# def analyze_job(job: dict) -> Tuple[bool, str, dict]:
+#     if job['job_description'] == 'Could not find Job Description':
+#         return [False, 'Could not find Job Description', job]
+
+def analyze_job(job):
     # Load resume
     file_path = './data/Chris Phillips Resume.docx'
     resume = read_resume(file_path)
 
     # Create the prompt
     prompt = f"""
-    I am providing you two things: a job description and a resume. I want you to analyze the job description and the resume to see if they are a good match. If they are, return True and why they are a good match. If not, return False and why they are not a good match. The True or False should be the first line and then the explanation should start in a newline under that. Keep your response under 950 characters.
+    I am providing you two things: a job description and my personal resume. I want you to look at each and decide if I am a good candidate for the role. For analysis I want you to look at the keywords in the job description as if you were a part of an ATS(applicant tracking system). I want you to grade harshly and strictly analyze each aspect of the job description and my resume.
+
+    As a response, I want you to give me a confidence score between 0 and 100 percent.
+    Here is the confidence score breakdown:
+
+    1. **0-20% - "Not a Good Fit"**
+       - **Description**: The resume does not align with the job requirements at all. Relevant skills, qualifications, or experiences are missing.
+       - **Action**: Consider applying for a different position or enhancing your qualifications.
+
+    2. **21-40% - "Limited Fit"**
+       - **Description**: Some relevant skills or experiences are present, but there are significant gaps in qualifications. The job would likely require considerable upskilling.
+       - **Action**: Look for jobs that align better with your current qualifications or consider gaining more experience.
+
+    3. **41-60% - "Moderate Fit"**
+       - **Description**: The resume has several relevant elements, but not enough to demonstrate strong suitability for the position. You might meet some, but not all, of the important criteria.
+       - **Action**: Consider applying, but be prepared to explain how your background aligns with the job requirements in your application.
+
+    4. **61-80% - "Good Fit"**
+       - **Description**: The resume matches most of the key requirements, showcasing a strong alignment with the job description. However, there may still be a few areas where additional experience or skills are needed.
+       - **Action**: It would be reasonable to apply for this position, highlighting your relevant skills and experiences.
+
+    5. **81-100% - "Excellent Fit"**
+       - **Description**: The resume almost or completely matches the job requirements, demonstrating a strong reputation and fit for the role. You possess most or all of the qualifications and experiences needed.
+       - **Action**: Apply confidently and prepare to discuss your qualifications in detail during the interview.
+
+    The format of the response should be in the format of 0-100 (int), then a new line, then an explanation beginning with "True" or "False" for if you think I'm a good candidate. Keep your response under 950 characters.
 
     Here is the job description:
     ### Job Description:
@@ -50,8 +78,10 @@ def analyze_job(job):
     logging.info("Asking ChatGPT to analyze job")
     print(chatgpt_analysis)
 
-    verdict = check_first_line(chatgpt_analysis)
-    res = [verdict, chatgpt_analysis, job]
+
+    confidence_score  = int(chatgpt_analysis.splitlines()[0])
+    res = [confidence_score, chatgpt_analysis, job]
+
     return res
 
 
@@ -71,21 +101,3 @@ def read_resume(file_path):
     # Join paragraphs with newline characters for readability
     return "\n".join(resume_text)
 
-
-def check_first_line(text):
-    # Split the text into lines
-    first_line = text.splitlines()[0]  # This gives us the first line of the string
-
-    # Regex pattern to match "True" or "False" at the beginning of the first line
-    pattern = r"^(True|False)"
-
-    match = re.match(pattern, first_line)
-
-    if match:
-        # Return True if the matched text is "True", otherwise return False
-        return match.group(0) == "True"
-    else:
-        return False  # Return False if there is no match
-
-
-# analyze_job(test_description_3)
