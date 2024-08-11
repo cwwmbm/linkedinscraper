@@ -16,15 +16,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 
-
-
 def analyze_job(job):
     if job['description'] is None:
         return False
 
     # Load resume
     file_path = '../../data/Chris Phillips Resume.docx'
-    resume = read_docx(file_path)
+    resume = read_resume(file_path)
 
     prompt = f"""
     I am providing you two things: a job description and a resume. I want you to analyze the job description and the resume to see if they are a good match. If they are, return True and why they are a good match. If not, return False and why they are not a good match. The True or False should be the first line and then the explanation should start in a newline under that.
@@ -48,18 +46,24 @@ def analyze_job(job):
     )
 
     # Extract the initial tailored resume content
-    tailored_resume = response.choices[0].message.content
+    chatgpt_analysis = response.choices[0].message.content
+
+    return chatgpt_analysis
 
 
-
-def read_docx(file_path):
+def read_resume(file_path):
     # Load the document
-    doc = Document(file_path)
+    try:
+        doc = Document(file_path)
+    except Exception as e:
+        return f"Error reading the document: {str(e)}"
 
-    # Extract text from each paragraph
-    doc_text = []
+    # Extract text from each paragraph while skipping empty ones
+    resume_text = []
     for para in doc.paragraphs:
-        doc_text.append(para.text)
+        if para.text.strip():  # Skip empty paragraphs
+            resume_text.append(para.text)
 
-    return "\n".join(doc_text)  # Joining paragraphs with newlines
+    # Join paragraphs with newline characters for readability
+    return "\n".join(resume_text)
 
