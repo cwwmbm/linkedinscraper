@@ -14,28 +14,27 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
-
 def analyze_job(job):
     if job['description'] is None:
-        return False
+        return [False, "Job description is empty", None]
 
     # Load resume
-    file_path = '../../data/Chris Phillips Resume.docx'
+    file_path = './data/Chris Phillips Resume.docx'
     resume = read_resume(file_path)
 
+    # Create the prompt
     prompt = f"""
-    I am providing you two things: a job description and a resume. I want you to analyze the job description and the resume to see if they are a good match. If they are, return True and why they are a good match. If not, return False and why they are not a good match. The True or False should be the first line and then the explanation should start in a newline under that.
+    I am providing you two things: a job description and a resume. I want you to analyze the job description and the resume to see if they are a good match. If they are, return True and why they are a good match. If not, return False and why they are not a good match. The True or False should be the first line and then the explanation should start in a newline under that. Keep your response under 950 characters.
 
     Here is the job description:
     ### Job Description:
-    {job['description']}
+    {job}
 
     ### Here is my resume:
     {resume}
    """
 
-    # Send the initial prompt to ChatGPT
+    # Send the prompt to ChatGPT
     logging.info("Asking ChatGPT to analyze job")
     response = client.chat.completions.create(
         model="gpt-4",
@@ -45,10 +44,15 @@ def analyze_job(job):
         ]
     )
 
-    # Extract the initial tailored resume content
+    # Extract the ChatGPT analysis
     chatgpt_analysis = response.choices[0].message.content
 
-    return chatgpt_analysis
+    logging.info("Asking ChatGPT to analyze job")
+    print(chatgpt_analysis)
+
+    verdict = check_first_line(chatgpt_analysis)
+    res = [verdict, chatgpt_analysis, job]
+    return res
 
 
 def read_resume(file_path):
@@ -67,3 +71,21 @@ def read_resume(file_path):
     # Join paragraphs with newline characters for readability
     return "\n".join(resume_text)
 
+
+def check_first_line(text):
+    # Split the text into lines
+    first_line = text.splitlines()[0]  # This gives us the first line of the string
+
+    # Regex pattern to match "True" or "False" at the beginning of the first line
+    pattern = r"^(True|False)"
+
+    match = re.match(pattern, first_line)
+
+    if match:
+        # Return True if the matched text is "True", otherwise return False
+        return match.group(0) == "True"
+    else:
+        return False  # Return False if there is no match
+
+
+# analyze_job(test_description_3)
