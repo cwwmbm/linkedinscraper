@@ -9,13 +9,18 @@
         },
         {
             "day_of_week": "mon,tue,wed,thu,fri",
-            "hour": 11,
+            "hour": 10,
+            "minute": 30
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 12,
             "minute": 0
         },
         {
             "day_of_week": "mon,tue,wed,thu,fri",
             "hour": 13,
-            "minute": 0
+            "minute": 30
         },
         {
             "day_of_week": "mon,tue,wed,thu,fri",
@@ -24,7 +29,12 @@
         },
         {
             "day_of_week": "mon,tue,wed,thu,fri",
-            "hour": 17,
+            "hour": 16,
+            "minute": 30
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 18,
             "minute": 0
         },
         {
