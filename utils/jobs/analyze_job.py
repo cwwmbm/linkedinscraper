@@ -33,24 +33,10 @@ def analyze_job(job: dict) -> Tuple[int, str, dict]:
     Here is the confidence score breakdown:
 
     1. **0-20% - "Not a Good Fit"**
-       - **Description**: The resume does not align with the job requirements at all. Relevant skills, qualifications, or experiences are missing.
-       - **Action**: Consider applying for a different position or enhancing your qualifications.
-
     2. **21-40% - "Limited Fit"**
-       - **Description**: Some relevant skills or experiences are present, but there are significant gaps in qualifications. The job would likely require considerable upskilling.
-       - **Action**: Look for jobs that align better with your current qualifications or consider gaining more experience.
-
     3. **41-60% - "Moderate Fit"**
-       - **Description**: The resume has several relevant elements, but not enough to demonstrate strong suitability for the position. You might meet some, but not all, of the important criteria.
-       - **Action**: Consider applying, but be prepared to explain how your background aligns with the job requirements in your application.
-
     4. **61-80% - "Good Fit"**
-       - **Description**: The resume matches most of the key requirements, showcasing a strong alignment with the job description. However, there may still be a few areas where additional experience or skills are needed.
-       - **Action**: It would be reasonable to apply for this position, highlighting your relevant skills and experiences.
-
     5. **81-100% - "Excellent Fit"**
-       - **Description**: The resume almost or completely matches the job requirements, demonstrating a strong reputation and fit for the role. You possess most or all of the qualifications and experiences needed.
-       - **Action**: Apply confidently and prepare to discuss your qualifications in detail during the interview.
 
     The format of the response should be in the format of 0-100 (int), then a new line, then an explanation beginning with "True" or "False" for if you think I'm a good candidate. Keep your response under 950 characters.
 
