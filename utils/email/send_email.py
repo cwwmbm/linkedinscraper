@@ -19,7 +19,7 @@ def send_email(jobs_list):
     password = SENDER_PASSWORD
     to_email = RECIPIENT_EMAIL
     subject = create_subject()
-    body = create_body_text(jobs_list)
+    html_body = create_body_text(jobs_list)
 
     # Set up the MIME
     msg = MIMEMultipart()
@@ -57,14 +57,19 @@ def create_body_text(jobs_list):
     body = "<html><body>"
     for i, job in enumerate(jobs_list, start=1):
         body += f"""
-        <hr>
-        <h2>Job {i}: {job['title']}</h2>
-        <h3>Company: {job['company']}</h3>
-        <p><strong>Job Description:</strong> {job['job_description']}</p>
-        <p><strong>Confidence Score:</strong> {job['confidence_score']}</p>
-        <p><strong>Analysis:</strong> {job['analysis']}</p>
-        <p><strong>Job URL:</strong> <a href="{job['job_url']}">{job['job_url']}</a></p>
-        <hr>
+        <hr style="border: 1px solid #000;">
+        <h2 style="margin: 0;">Job {i}: {job['title']}</h2>
+        <h3 style="margin: 0;">Company: {job['company']}</h3>
+        <hr style="border: 1px solid #000;">
+        <h4 style="margin: 0;">Job Description:</h4>
+        <p>{job['job_description']}</p>
+        <h4 style="margin: 0;">Confidence Score:</h4>
+        <p><strong>{job['confidence_score']}</strong></p>
+        <h4 style="margin: 0;">Analysis:</h4>
+        <p>{job['analysis']}</p>
+        <h4 style="margin: 0;">Job URL:</h4>
+        <p><a href="{job['job_url']}">{job['job_url']}</a></p>
+        <hr style="border: 1px solid #000;">
         """
     body += "</body></html>"
     return body
