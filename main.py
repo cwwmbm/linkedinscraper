@@ -34,7 +34,9 @@ def setup_logger():
     logger.setLevel(logging.INFO)
 
     # Create a file handler that logs messages to the logs directory with a timestamped filename
-    log_filename = os.path.join(log_directory, f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    now = datetime.now()  # Get the current date and time
+    timestamp = now.strftime("%a, %b %d, %Y %H:%M")
+    log_filename = os.path.join(log_directory, f"{timestamp}.log")
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.INFO)
 
@@ -267,12 +269,13 @@ def get_jobcards(config):
                 soup = get_with_retry(url, config)
                 jobs = transform(soup)
                 all_jobs = all_jobs + jobs
-                logger.info("Finished scraping page: ", url)
-    logger.info ("Total job cards scraped: ", len(all_jobs))
+                logger.info(f"Finished scraping page: {url}")
+    logger.info(f"Total job cards scraped: {len(all_jobs)}")
     all_jobs = remove_duplicates(all_jobs, config)
-    logger.info ("Total job cards after removing duplicates: ", len(all_jobs))
+    logger.info(f"Total job cards after removing duplicates: {len(all_jobs)}")
     all_jobs = remove_irrelevant_jobs(all_jobs, config)
-    logger.info ("Total job cards after removing irrelevant jobs: ", len(all_jobs))
+    logger.info(f"Total job cards after removing irrelevant jobs: {len(all_jobs)}")
+    
     return all_jobs
 
 def find_new_jobs(all_jobs, conn, config):
@@ -304,7 +307,7 @@ def main(config_file):
     conn = create_connection(config)
     #filtering out jobs that are already in the database
     all_jobs = find_new_jobs(all_jobs, conn, config)
-    logger.info ("Total new jobs found after comparing to the database: ", len(all_jobs))
+    logger.info(f"Total new jobs found after comparing to the database: {len(all_jobs)}")
 
     if len(all_jobs) > 0:
 
@@ -314,18 +317,18 @@ def main(config_file):
             #if job is older than a week, skip it
             if job_date < datetime.now() - timedelta(days=config['days_to_scrape']):
                 continue
-            logger.info('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
+            logger.info(f"Found new job: {job['title']} at {job['company']} {job['job_url']}")
             desc_soup = get_with_retry(job['job_url'], config)
             job['job_description'] = transform_job(desc_soup)
             language = safe_detect(job['job_description'])
             if language not in config['languages']:
-                logger.info('Job description language not supported: ', language)
+                logger.info(f"Job description language not supported: {language}")
                 #continue
             job_list.append(job)
 
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)
-        logger.info ("Total jobs to add: ", len(jobs_to_add))
+        logger.info(f"Total jobs to add: {len(all_jobs)}")
         #Create a list for jobs removed based on job description keywords - they will be added to the filtered_jobs table
         filtered_list = [job for job in job_list if job not in jobs_to_add]
         df = pd.DataFrame(jobs_to_add)
@@ -424,4 +427,5 @@ if __name__ == "__main__":
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         logger.info("Scheduler stopped.")
+        scheduler.shutdown()
 
