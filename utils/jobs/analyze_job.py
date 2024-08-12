@@ -16,11 +16,11 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-# def analyze_job(job: dict) -> Tuple[bool, str, dict]:
-#     if job['job_description'] == 'Could not find Job Description':
-#         return [False, 'Could not find Job Description', job]
+def analyze_job(job: dict) -> Tuple[int, str, dict]:
+    if job['job_description'] == 'Could not find Job Description':
+        return [0, 'Could not find Job Description', job]
 
-def analyze_job(job):
+# def analyze_job(job):
     # Load resume
     file_path = './data/Chris Phillips Resume.docx'
     resume = read_resume(file_path)
