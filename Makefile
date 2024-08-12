@@ -27,7 +27,9 @@ create_db: create_db_dir
 		interview INTEGER DEFAULT 0, \
 		rejected INTEGER DEFAULT 0, \
 		cover_letter TEXT, \
-		resume TEXT \
+		resume TEXT, \
+		confidence_score INTEGER DEFAULT 0, \
+		analysis TEXT \
 	);"
 	@echo "Database created successfully."
 
