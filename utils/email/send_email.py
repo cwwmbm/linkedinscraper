@@ -53,26 +53,29 @@ def create_subject():
     return f"Job Bot Run - {timestamp}"
 
 
+
 def create_body_text(jobs_list):
-    body = "<html><body>"
+    body = "<html><body style='font-family: Arial, sans-serif;'>"
     for i, job in enumerate(jobs_list, start=1):
         body += f"""
-        <hr style="border: 1px solid #000;">
-        <h2 style="margin: 0;">Job {i}: {job['title']}</h2>
-        <h3 style="margin: 0;">Company: {job['company']}</h3>
-        <hr style="border: 1px solid #000;">
-        <h4 style="margin: 0;">Job Description:</h4>
-        <p>{job['job_description']}</p>
-        <h4 style="margin: 0;">Confidence Score:</h4>
-        <p><strong>{job['confidence_score']}</strong></p>
-        <h4 style="margin: 0;">Analysis:</h4>
-        <p>{job['analysis']}</p>
-        <h4 style="margin: 0;">Job URL:</h4>
-        <p><a href="{job['job_url']}">{job['job_url']}</a></p>
-        <hr style="border: 1px solid #000;">
+        <div style="margin-bottom: 20px;">
+            <hr style="border: 1px solid #000;">
+            <h2 style="margin: 0; font-size: 18px; color: #333;">Job {i}: {job['title']}</h2>
+            <h3 style="margin: 0; font-size: 16px; color: #555;">Company: {job['company']}</h3>
+            <hr style="border: 1px solid #000;">
+            <h4 style="margin: 0; font-size: 14px; color: #333;">Job Description:</h4>
+            <p style="margin: 5px 0 15px 0;">{job['job_description']}</p>
+            <h4 style="margin: 0; font-size: 14px; color: #333;">Confidence Score:</h4>
+            <p style="margin: 5px 0 15px 0;"><strong>{job['confidence_score']}</strong></p>
+            <h4 style="margin: 0; font-size: 14px; color: #333;">Analysis:</h4>
+            <p style="margin: 5px 0 15px 0;">{job['analysis']}</p>
+            <h4 style="margin: 0; font-size: 14px; color: #333;">Job URL:</h4>
+            <p style="margin: 5px 0 15px 0;"><a href="{job['job_url']}" style="color: #1a0dab;">{job['job_url']}</a></p>
+            <hr style="border: 1px solid #000;">
+        </div>
         """
     body += "</body></html>"
     return body
 
-# TODO: add body text to email for list of jobs
+
 # TODO: add attachment to email for log file of run
