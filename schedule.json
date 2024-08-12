@@ -1,0 +1,48 @@
+
+{
+    "type": "cron",
+    "schedules": [
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 9,
+            "minute": 00
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 11,
+            "minute": 00
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 13,
+            "minute": 00
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 15,
+            "minute": 00
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 17,
+            "minute": 00
+        },
+        {
+            "day_of_week": "mon,tue,wed,thu,fri",
+            "hour": 21,
+            "minute": 15
+        },
+        {
+            "day_of_week": "sat,sun",
+            "hour": 9,
+            "minute": 30
+        },
+        {
+            "day_of_week": "sat,sun",
+            "hour": 12,
+            "minute": 30
+        }
+
+    ]
+}
+
