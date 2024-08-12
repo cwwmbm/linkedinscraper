@@ -12,8 +12,7 @@ from urllib.parse import quote
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from utils.jobs.analyze_job import analyze_job
-from utils.send_email import send_email
-
+from utils.email.send_email import send_email
 
 def load_config(file_name):
     # Load the config file
@@ -297,13 +296,13 @@ def main(config_file):
             job_list.append(job)
             gpt_response = analyze_job(job)
             print(job)
-            if gpt_response[0] >= 70:
+            if gpt_response[0] >= 85:
                 job['confidence_score'] = gpt_response[0]
                 job['analysis'] = gpt_response[1]
                 jobs_to_email.append(job)
                 print('Added job to email list 👍')
                 # breakpoint()
-        # send_email(jobs_to_email)
+        send_email(jobs_to_email)
                 # breakpoint()
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)
