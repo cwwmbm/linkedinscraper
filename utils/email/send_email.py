@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -10,9 +11,15 @@ SENDER_EMAIL = os.getenv('SENDER_EMAIL')
 SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
 RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
 
-def send_email(subject, body, to_email):
+def send_email(jobs_list):
+    if len(jobs_list) == 0:
+        print("No jobs found to send email for.")
+        return
     from_email = SENDER_EMAIL
     password = SENDER_PASSWORD
+    to_email = RECIPIENT_EMAIL
+    subject = create_subject()
+    body = create_body_text(jobs_list)
 
     # Set up the MIME
     msg = MIMEMultipart()
@@ -21,7 +28,8 @@ def send_email(subject, body, to_email):
     msg['Subject'] = subject
 
     # Attach the body with the msg instance
-    msg.attach(MIMEText(body, 'plain'))
+    msg.attach(MIMEText(html_body, 'html'))
+
 
     # Create an SMTP session
     server = smtplib.SMTP('smtp.gmail.com', 587)
@@ -36,12 +44,30 @@ def send_email(subject, body, to_email):
 
     # Close the connection
     server.quit()
-
-# Example usage
-send_email("Test Subject", "This is a test email", RECIPIENT_EMAIL)
+    return
 
 
-# TODO: add timestamp to email subject
+def create_subject():
+    now = datetime.now()  # Get the current date and time
+    timestamp = now.strftime("%a, %b %d, %Y %H:%M")
+    return f"Job Bot Run - {timestamp}"
+
+
+def create_body_text(jobs_list):
+    body = "<html><body>"
+    for i, job in enumerate(jobs_list, start=1):
+        body += f"""
+        <hr>
+        <h2>Job {i}: {job['title']}</h2>
+        <h3>Company: {job['company']}</h3>
+        <p><strong>Job Description:</strong> {job['job_description']}</p>
+        <p><strong>Confidence Score:</strong> {job['confidence_score']}</p>
+        <p><strong>Analysis:</strong> {job['analysis']}</p>
+        <p><strong>Job URL:</strong> <a href="{job['job_url']}">{job['job_url']}</a></p>
+        <hr>
+        """
+    body += "</body></html>"
+    return body
+
 # TODO: add body text to email for list of jobs
 # TODO: add attachment to email for log file of run
-# TODO: add list of jobs to email
