@@ -40,8 +40,5 @@ reset_db: create_db_dir
 	@$(MAKE) create_db
 	@echo "Database reset successfully."
 
-# Command to start proxy server
-start_proxy:
-	mitmproxy --mode regular --listen-port 8080
 
 # Create command to create resume
