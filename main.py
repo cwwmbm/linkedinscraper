@@ -13,6 +13,7 @@ from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
 from utils.jobs.analyze_job import analyze_job
 from utils.email.send_email import send_email
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 def load_config(file_name):
     # Load the config file
@@ -342,10 +343,47 @@ def main(config_file):
     print(f"Scraping finished in {end_time - start_time:.2f} seconds")
 
 
+
+def scheduled_task(config_file):
+    main(config_file)
+
+def load_schedule_config(schedule_file):
+    with open(schedule_file, 'r') as f:
+        return json.load(f)
+
 if __name__ == "__main__":
-    config_file = 'config.json'  # default config file
+    # Default configuration file
+    config_file = 'config.json'
+    schedule_file = 'schedule.json'
+
+    # Check if different config or schedule files were passed as arguments
     if len(sys.argv) == 2:
         config_file = sys.argv[1]
-        
-    main(config_file)
+    elif len(sys.argv) == 3:
+        config_file = sys.argv[1]
+        schedule_file = sys.argv[2]
+
+    # Load the schedule configuration
+    schedule_config = load_schedule_config(schedule_file)
+
+    # Set up the scheduler
+    scheduler = BlockingScheduler()
+
+    if schedule_config['type'] == 'cron':
+        for schedule in schedule_config['schedules']:
+            scheduler.add_job(
+                scheduled_task,
+                'cron',
+                day_of_week=schedule.get('day_of_week', '*'),
+                hour=schedule.get('hour', 0),
+                minute=schedule.get('minute', 0),
+                args=[config_file]
+            )
+
+    # Start the scheduler
+    try:
+        print("Scheduler started...")
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        print("Scheduler stopped.")
 
