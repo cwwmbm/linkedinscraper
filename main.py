@@ -279,7 +279,6 @@ def main(config_file):
     print ("Total new jobs found after comparing to the database: ", len(all_jobs))
 
     if len(all_jobs) > 0:
-        jobs_to_email = []
 
         for job in all_jobs:
             job_date = convert_date_format(job['date'])
@@ -295,16 +294,7 @@ def main(config_file):
                 print('Job description language not supported: ', language)
                 #continue
             job_list.append(job)
-            gpt_response = analyze_job(job)
-            print(job)
-            if gpt_response[0] >= 85:
-                job['confidence_score'] = gpt_response[0]
-                job['analysis'] = gpt_response[1]
-                jobs_to_email.append(job)
-                print('Added job to email list 👍')
-                # breakpoint()
-        send_email(jobs_to_email)
-                # breakpoint()
+
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)
         print ("Total jobs to add: ", len(jobs_to_add))
@@ -317,7 +307,18 @@ def main(config_file):
         df['date_loaded'] = df['date_loaded'].astype(str)
         df_filtered['date_loaded'] = df_filtered['date_loaded'].astype(str)
 
+
+        jobs_to_email = []
+        for job in jobs_to_add:
+            gpt_response = analyze_job(job)
+            if gpt_response[0] >= 85:
+                job['confidence_score'] = gpt_response[0]
+                job['analysis'] = gpt_response[1]
+                jobs_to_email.append(job)
+                print('Added job to email list 👍')
         
+        send_email(jobs_to_email)
+
         if conn is not None:
             #Update or Create the database table for the job list
             if table_exists(conn, jobs_tablename):
