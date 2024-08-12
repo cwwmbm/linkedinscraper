@@ -40,5 +40,10 @@ reset_db: create_db_dir
 	@$(MAKE) create_db
 	@echo "Database reset successfully."
 
+# Command to clone the database with a timestamp
+clone_db:
+	@echo "Cloning database..."
+	@cp $(DB_PATH) $(dir $(DB_PATH))db_`date +%Y%m%d_%H%M%S`_clone.sqlite
+	@echo "Database cloned successfully as db_`date +%Y%m%d_%H%M%S`_clone.sqlite"
 
 # Create command to create resume
