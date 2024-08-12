@@ -1,7 +1,9 @@
+import os
 import requests
 import json
 import sqlite3
 import sys
+import logging
 from sqlite3 import Error
 from bs4 import BeautifulSoup
 import time as tm
@@ -20,6 +22,32 @@ def load_config(file_name):
     with open(file_name) as f:
         return json.load(f)
 
+
+def setup_logger():
+    # Create the logs directory if it doesn't exist
+    log_directory = "logs"
+    if not os.path.exists(log_directory):
+        os.makedirs(log_directory)
+
+    # Set up the logger
+    logger = logging.getLogger('SchedulerLogger')
+    logger.setLevel(logging.INFO)
+
+    # Create a file handler that logs messages to the logs directory with a timestamped filename
+    log_filename = os.path.join(log_directory, f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+    file_handler = logging.FileHandler(log_filename)
+    file_handler.setLevel(logging.INFO)
+
+    # Create a logging format
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+
+    # Add the handler to the logger
+    logger.addHandler(file_handler)
+    
+    return logger
+
+
 def get_with_retry(url, config, retries=3, delay=1):
     # Get the URL with retries and delay
     for i in range(retries):
@@ -30,10 +58,10 @@ def get_with_retry(url, config, retries=3, delay=1):
                 r = requests.get(url, headers=config['headers'], timeout=5)
             return BeautifulSoup(r.content, 'html.parser')
         except requests.exceptions.Timeout:
-            print(f"Timeout occurred for URL: {url}, retrying in {delay}s...")
+            logger.info(f"Timeout occurred for URL: {url}, retrying in {delay}s...")
             tm.sleep(delay)
         except Exception as e:
-            print(f"An error occurred while retrieving the URL: {url}, error: {e}")
+            logger.error(f"An error occurred while retrieving the URL: {url}, error: {e}")
     return None
 
 def transform(soup):
@@ -42,7 +70,7 @@ def transform(soup):
     try:
         divs = soup.find_all('div', class_='base-search-card__info')
     except:
-        print("Empty page, no jobs found")
+        logger.info("Empty page, no jobs found")
         return joblist
     for item in divs:
         title = item.find('h3').text.strip()
@@ -132,7 +160,7 @@ def convert_date_format(date_string):
         job_date = datetime.strptime(date_string, date_format).date()
         return job_date
     except ValueError:
-        print(f"Error: The date for job {date_string} - is not in the correct format.")
+        logger.error(f"Error: The date for job {date_string} - is not in the correct format.")
         return None
 
 def create_connection(config):
@@ -141,9 +169,9 @@ def create_connection(config):
     path = config['db_path']
     try:
         conn = sqlite3.connect(path) # creates a SQL database in the 'data' directory
-        #print(sqlite3.version)
+        # logger.info(sqlite3.version)
     except Error as e:
-        print(e)
+        logger.error(e)
 
     return conn
 
@@ -195,7 +223,7 @@ def create_table(conn, df, table_name):
     # Commit the transaction
     conn.commit()
 
-    print(f"Created the {table_name} table and added {len(df)} records")
+    logger.info(f"Created the {table_name} table and added {len(df)} records")
 
 def update_table(conn, df, table_name):
     # Update the existing table with new records.
@@ -207,9 +235,9 @@ def update_table(conn, df, table_name):
     # If there are new records, append them to the existing table
     if len(df_new_records) > 0:
         df_new_records.to_sql(table_name, conn, if_exists='append', index=False)
-        print (f"Added {len(df_new_records)} new records to the {table_name} table")
+        logger.info(f"Added {len(df_new_records)} new records to the {table_name} table")
     else:
-        print (f"No new records to add to the {table_name} table")
+        logger.info(f"No new records to add to the {table_name} table")
 
 def table_exists(conn, table_name):
     # Check if the table already exists in the database
@@ -239,12 +267,12 @@ def get_jobcards(config):
                 soup = get_with_retry(url, config)
                 jobs = transform(soup)
                 all_jobs = all_jobs + jobs
-                print("Finished scraping page: ", url)
-    print ("Total job cards scraped: ", len(all_jobs))
+                logger.info("Finished scraping page: ", url)
+    logger.info ("Total job cards scraped: ", len(all_jobs))
     all_jobs = remove_duplicates(all_jobs, config)
-    print ("Total job cards after removing duplicates: ", len(all_jobs))
+    logger.info ("Total job cards after removing duplicates: ", len(all_jobs))
     all_jobs = remove_irrelevant_jobs(all_jobs, config)
-    print ("Total job cards after removing irrelevant jobs: ", len(all_jobs))
+    logger.info ("Total job cards after removing irrelevant jobs: ", len(all_jobs))
     return all_jobs
 
 def find_new_jobs(all_jobs, conn, config):
@@ -276,7 +304,7 @@ def main(config_file):
     conn = create_connection(config)
     #filtering out jobs that are already in the database
     all_jobs = find_new_jobs(all_jobs, conn, config)
-    print ("Total new jobs found after comparing to the database: ", len(all_jobs))
+    logger.info ("Total new jobs found after comparing to the database: ", len(all_jobs))
 
     if len(all_jobs) > 0:
 
@@ -286,18 +314,18 @@ def main(config_file):
             #if job is older than a week, skip it
             if job_date < datetime.now() - timedelta(days=config['days_to_scrape']):
                 continue
-            print('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
+            logger.info('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
             desc_soup = get_with_retry(job['job_url'], config)
             job['job_description'] = transform_job(desc_soup)
             language = safe_detect(job['job_description'])
             if language not in config['languages']:
-                print('Job description language not supported: ', language)
+                logger.info('Job description language not supported: ', language)
                 #continue
             job_list.append(job)
 
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)
-        print ("Total jobs to add: ", len(jobs_to_add))
+        logger.info ("Total jobs to add: ", len(jobs_to_add))
         #Create a list for jobs removed based on job description keywords - they will be added to the filtered_jobs table
         filtered_list = [job for job in job_list if job not in jobs_to_add]
         df = pd.DataFrame(jobs_to_add)
@@ -315,8 +343,8 @@ def main(config_file):
                 job['confidence_score'] = gpt_response[0]
                 job['analysis'] = gpt_response[1]
                 jobs_to_email.append(job)
-                print('Added job to email list 👍')
-        
+                logger.info('Added job to email list 👍')
+
         send_email(jobs_to_email)
 
         if conn is not None:
@@ -332,27 +360,32 @@ def main(config_file):
             else:
                 create_table(conn, df_filtered, filtered_jobs_tablename)
         else:
-            print("Error! cannot create the database connection.")
+            logger.info("Error! cannot create the database connection.")
         
         df.to_csv('linkedin_jobs.csv', index=False, encoding='utf-8')
         df_filtered.to_csv('linkedin_jobs_filtered.csv', index=False, encoding='utf-8')
 
     else:
-        print("No jobs found")
+        logger.info("No jobs found")
     
     end_time = tm.perf_counter()
-    print(f"Scraping finished in {end_time - start_time:.2f} seconds")
+    logger.info(f"Scraping finished in {end_time - start_time:.2f} seconds")
 
 
 
 def scheduled_task(config_file):
+    logger.info(f"Starting scheduled task with config file: {config_file}")
     main(config_file)
+    logger.info("Scheduled task completed.")
 
 def load_schedule_config(schedule_file):
     with open(schedule_file, 'r') as f:
         return json.load(f)
 
 if __name__ == "__main__":
+    # Set up the logger
+    logger = setup_logger()
+
     # Default configuration file
     config_file = 'config.json'
     schedule_file = 'schedule.json'
@@ -364,6 +397,9 @@ if __name__ == "__main__":
         config_file = sys.argv[1]
         schedule_file = sys.argv[2]
 
+    logger.info(f"Using config file: {config_file}")
+    logger.info(f"Using schedule file: {schedule_file}")
+
     # Load the schedule configuration
     schedule_config = load_schedule_config(schedule_file)
 
@@ -372,6 +408,7 @@ if __name__ == "__main__":
 
     if schedule_config['type'] == 'cron':
         for schedule in schedule_config['schedules']:
+            logger.info(f"Scheduling task on {schedule['day_of_week']} at {schedule['hour']}:{schedule['minute']}")
             scheduler.add_job(
                 scheduled_task,
                 'cron',
@@ -383,8 +420,8 @@ if __name__ == "__main__":
 
     # Start the scheduler
     try:
-        print("Scheduler started...")
+        logger.info("Scheduler started...")
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
-        print("Scheduler stopped.")
+        logger.info("Scheduler stopped.")
 
