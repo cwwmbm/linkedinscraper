@@ -46,4 +46,13 @@ clone_db:
 	@cp $(DB_PATH) $(dir $(DB_PATH))db_`date +%Y%m%d_%H%M%S`_clone.sqlite
 	@echo "Database cloned successfully as db_`date +%Y%m%d_%H%M%S`_clone.sqlite"
 
+# Command to run the script without the scheduler
+run_bot:
+	@echo "Running script without schedule..."
+	@python3 main.py
+
+# Command to run the script with the scheduler
+run_scheduled_bot:
+	@echo "Running script with schedule..."
+	@python3 main.py schedule.json
 # Create command to create resume

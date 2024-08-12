@@ -339,16 +339,17 @@ def main(config_file):
         df_filtered['date_loaded'] = df_filtered['date_loaded'].astype(str)
 
 
-        jobs_to_email = []
-        for job in jobs_to_add:
-            gpt_response = analyze_job(job)
-            if gpt_response[0] >= 85:
-                job['confidence_score'] = gpt_response[0]
-                job['analysis'] = gpt_response[1]
-                jobs_to_email.append(job)
-                logger.info('Added job to email list 👍')
-
-        send_email(jobs_to_email)
+        # jobs_to_email = []
+        # for job in jobs_to_add:
+        #     if job['job_description'] != 'Could not find Job Description':
+        #         gpt_response = analyze_job(job)
+        #         if gpt_response[0] >= 85:
+        #             job['confidence_score'] = gpt_response[0]
+        #             job['analysis'] = gpt_response[1]
+        #             jobs_to_email.append(job)
+        #             logger.info('Added job to email list 👍')
+        #
+        # send_email(jobs_to_email)
 
         if conn is not None:
             #Update or Create the database table for the job list
@@ -385,47 +386,53 @@ def load_schedule_config(schedule_file):
     with open(schedule_file, 'r') as f:
         return json.load(f)
 
+
 if __name__ == "__main__":
     # Set up the logger
     logger = setup_logger()
 
     # Default configuration file
     config_file = 'config.json'
-    schedule_file = 'schedule.json'
+    schedule_file = None  # Start with no schedule file
 
     # Check if different config or schedule files were passed as arguments
     if len(sys.argv) == 2:
-        config_file = sys.argv[1]
+        schedule_file = sys.argv[1]
     elif len(sys.argv) == 3:
         config_file = sys.argv[1]
         schedule_file = sys.argv[2]
 
     logger.info(f"Using config file: {config_file}")
-    logger.info(f"Using schedule file: {schedule_file}")
 
-    # Load the schedule configuration
-    schedule_config = load_schedule_config(schedule_file)
+    if schedule_file:
+        logger.info(f"Using schedule file: {schedule_file}")
+        # Load the schedule configuration
+        schedule_config = load_schedule_config(schedule_file)
 
-    # Set up the scheduler
-    scheduler = BlockingScheduler()
+        # Set up the scheduler
+        scheduler = BlockingScheduler()
 
-    if schedule_config['type'] == 'cron':
-        for schedule in schedule_config['schedules']:
-            logger.info(f"Scheduling task on {schedule['day_of_week']} at {schedule['hour']}:{schedule['minute']}")
-            scheduler.add_job(
-                scheduled_task,
-                'cron',
-                day_of_week=schedule.get('day_of_week', '*'),
-                hour=schedule.get('hour', 0),
-                minute=schedule.get('minute', 0),
-                args=[config_file]
-            )
+        if schedule_config['type'] == 'cron':
+            for schedule in schedule_config['schedules']:
+                logger.info(f"Scheduling task on {schedule['day_of_week']} at {schedule['hour']}:{schedule['minute']}")
+                scheduler.add_job(
+                    scheduled_task,
+                    'cron',
+                    day_of_week=schedule.get('day_of_week', '*'),
+                    hour=schedule.get('hour', 0),
+                    minute=schedule.get('minute', 0),
+                    args=[config_file]
+                )
 
-    # Start the scheduler
-    try:
-        logger.info("Scheduler started...")
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Scheduler stopped.")
-        scheduler.shutdown()
+        # Start the scheduler
+        try:
+            logger.info("Scheduler started...")
+            scheduler.start()
+        except (KeyboardInterrupt, SystemExit):
+            logger.info("Scheduler stopped.")
+            scheduler.shutdown()
+    else:
+        # Run the main function immediately if no schedule file is provided
+        logger.info("Running the main function without scheduling...")
+        main(config_file)
 
