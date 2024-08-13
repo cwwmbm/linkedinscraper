@@ -38,36 +38,21 @@ def setup_logger():
 
     # Create a file handler that logs messages to the logs directory with a timestamped filename
     now = datetime.now()  # Get the current date and time
-    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = now.strftime("%a, %b %d, %Y %H:%M")
     log_filename = os.path.join(log_directory, f"{timestamp}.log")
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.INFO)
 
-    # Create a logging format with colorlog
-    formatter = colorlog.ColoredFormatter(
-        '%(log_color)s%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'bold_red',
-        }
-    )
-
-    # Apply formatter to handlers
+    # Create a logging format
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(formatter)
-    
-    # Also log to console with the same formatter
-    stream_handler = colorlog.StreamHandler()
-    stream_handler.setFormatter(formatter)
 
-    # Add handlers to the logger
+    # Add the handler to the logger
     logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
     
     return logger
+
+
 def get_with_retry(url, config, retries=3, delay=1):
     # Get the URL with retries and delay
     for i in range(retries):
