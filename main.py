@@ -10,12 +10,15 @@ import time as tm
 from itertools import groupby
 from datetime import datetime, timedelta, time
 import pandas as pd
+import colorlog
 from urllib.parse import quote
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
+
 from utils.jobs.analyze_job import analyze_job
 from utils.email.send_email import send_email
 from apscheduler.schedulers.blocking import BlockingScheduler
+
 
 def load_config(file_name):
     # Load the config file
@@ -35,21 +38,36 @@ def setup_logger():
 
     # Create a file handler that logs messages to the logs directory with a timestamped filename
     now = datetime.now()  # Get the current date and time
-    timestamp = now.strftime("%a, %b %d, %Y %H:%M")
+    timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
     log_filename = os.path.join(log_directory, f"{timestamp}.log")
     file_handler = logging.FileHandler(log_filename)
     file_handler.setLevel(logging.INFO)
 
-    # Create a logging format
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
+    # Create a logging format with colorlog
+    formatter = colorlog.ColoredFormatter(
+        '%(log_color)s%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        log_colors={
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'bold_red',
+        }
+    )
 
-    # Add the handler to the logger
+    # Apply formatter to handlers
+    file_handler.setFormatter(formatter)
+    
+    # Also log to console with the same formatter
+    stream_handler = colorlog.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    # Add handlers to the logger
     logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
     
     return logger
-
-
 def get_with_retry(url, config, retries=3, delay=1):
     # Get the URL with retries and delay
     for i in range(retries):
