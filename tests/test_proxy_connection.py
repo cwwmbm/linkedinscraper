@@ -1,6 +1,6 @@
-
 import requests
 import json
+
 
 def test_proxy_connection():
 
@@ -10,9 +10,9 @@ def test_proxy_connection():
 
     # Load proxy configuration from config.json
     print("Loading proxy configuration from config.json...")
-    with open('config.json') as config_file:
+    with open("config.json") as config_file:
         config = json.load(config_file)
-        proxy = config['proxies']
+        proxy = config["proxies"]
     print(f"Proxy configuration loaded: {proxy}")
 
     # Function to make requests and print results
@@ -31,7 +31,7 @@ def test_proxy_connection():
             print(f"Response Headers: {response.headers}")
             print(f"Response Status Code: {response.status_code}")
 
-            ip = response.json().get('ip', 'N/A')
+            ip = response.json().get("ip", "N/A")
             return ip
         except requests.exceptions.RequestException as e:
             print(f"Error occurred: {str(e)}")
@@ -70,6 +70,6 @@ def test_proxy_connection():
     else:
         print("HTTPS Proxy connection was successfully used.")
 
-if __name__ == '__main__':
-    test_proxy_connection()
 
+if __name__ == "__main__":
+    test_proxy_connection()

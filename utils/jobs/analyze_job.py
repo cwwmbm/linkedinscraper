@@ -11,18 +11,20 @@ from openai import OpenAI
 # Load environment variables from the .env file
 load_dotenv()  # Loads the .env file into your environment
 # Set the OpenAI API key
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def analyze_job(job: dict) -> Tuple[int, str, dict]:
-    if job['job_description'] == 'Could not find Job Description':
-        return [0, 'Could not find Job Description', job]
+    if job["job_description"] == "Could not find Job Description":
+        return [0, "Could not find Job Description", job]
 
-# def analyze_job(job):
+    # def analyze_job(job):
     # Load resume
-    file_path = './data/Chris Phillips Resume.docx'
+    file_path = "./data/Chris Phillips Resume.docx"
     resume = read_resume(file_path)
 
     # Create the prompt
@@ -55,7 +57,7 @@ def analyze_job(job: dict) -> Tuple[int, str, dict]:
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
-        ]
+        ],
     )
 
     # Extract the ChatGPT analysis
@@ -64,8 +66,7 @@ def analyze_job(job: dict) -> Tuple[int, str, dict]:
     logging.info("Asking ChatGPT to analyze job")
     print(chatgpt_analysis)
 
-
-    confidence_score  = int(chatgpt_analysis.splitlines()[0])
+    confidence_score = int(chatgpt_analysis.splitlines()[0])
     res = [confidence_score, chatgpt_analysis, job]
 
     return res
@@ -86,4 +87,3 @@ def read_resume(file_path):
 
     # Join paragraphs with newline characters for readability
     return "\n".join(resume_text)
-

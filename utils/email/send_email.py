@@ -7,9 +7,10 @@ from dotenv import load_dotenv
 
 # Load environment variables from the .env file
 load_dotenv()  # Loads the .env file into your environment
-SENDER_EMAIL = os.getenv('SENDER_EMAIL')
-SENDER_PASSWORD = os.getenv('SENDER_PASSWORD')
-RECIPIENT_EMAIL = os.getenv('RECIPIENT_EMAIL')
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
+
 
 def send_email(jobs_list):
     if len(jobs_list) == 0:
@@ -23,16 +24,15 @@ def send_email(jobs_list):
 
     # Set up the MIME
     msg = MIMEMultipart()
-    msg['From'] = from_email
-    msg['To'] = to_email
-    msg['Subject'] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+    msg["Subject"] = subject
 
     # Attach the body with the msg instance
-    msg.attach(MIMEText(html_body, 'html'))
-
+    msg.attach(MIMEText(html_body, "html"))
 
     # Create an SMTP session
-    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server = smtplib.SMTP("smtp.gmail.com", 587)
     server.starttls()  # Start TLS for security
 
     # Login to the server
@@ -51,7 +51,6 @@ def create_subject():
     now = datetime.now()  # Get the current date and time
     timestamp = now.strftime("%a, %b %d, %Y %H:%M")
     return f"Job Bot Run - {timestamp}"
-
 
 
 def create_body_text(jobs_list):

@@ -5,15 +5,23 @@ import re
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from data.input.constants import CONTACT, SUMMARY, TECHNICAL_SKILLS, EXPERIENCE, EDUCATION
+from data.input.constants import (
+    CONTACT,
+    SUMMARY,
+    TECHNICAL_SKILLS,
+    EXPERIENCE,
+    EDUCATION,
+)
 from utils.create_resume import create_gpt_resume
 
 # Load environment variables from the .env file
 load_dotenv()  # Loads the .env file into your environment
 # Set the OpenAI API key
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def tailor_resume(summary, technical_skills, experience, skills_list, job_description):
@@ -53,7 +61,7 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         technical_skills=technical_skills_json,
         experience=experience_json,
         skills_list=skills_list_json,
-        job_description=job_description_json
+        job_description=job_description_json,
     )
 
     # Send the initial prompt to ChatGPT
@@ -63,7 +71,7 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": initial_prompt},
-        ]
+        ],
     )
 
     # Extract the initial tailored resume content
@@ -84,7 +92,7 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": question1_prompt},
-        ]
+        ],
     )
     logging.info("Adjustments made by chatgpt")
     logging.info(tailored_resume)
@@ -128,10 +136,9 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": question3_prompt},
-        ]
+        ],
     )
     tailored_resume = response.choices[0].message.content
-
 
     # Question 4: Ask for final optimization to make the correct json format to use in create_resume() function
     final_prompt_template = """
@@ -160,7 +167,7 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         technical_skills=technical_skills_json,
         experience=experience_json,
         skills_list=skills_list_json,
-        job_description=job_description_json
+        job_description=job_description_json,
     )
 
     # Send the final prompt to ChatGPT
@@ -170,7 +177,7 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": final_prompt},
-        ]
+        ],
     )
 
     # Extract the final tailored resume content
@@ -180,67 +187,78 @@ def tailor_resume(summary, technical_skills, experience, skills_list, job_descri
     logging.info("Returning final chatgpt response data")
     return tailored_resume
 
+
 # Load job description
-with open('./data/input/job_description.txt', 'r') as file:
+with open("./data/input/job_description.txt", "r") as file:
     job_description = file.read()
 
 # Load skills list
-with open('./data/input/skills_list.txt', 'r') as file:
+with open("./data/input/skills_list.txt", "r") as file:
     skills_list = file.read()
 
-raw_gpt_response = tailor_resume(SUMMARY, TECHNICAL_SKILLS, EXPERIENCE, job_description, skills_list)
+raw_gpt_response = tailor_resume(
+    SUMMARY, TECHNICAL_SKILLS, EXPERIENCE, job_description, skills_list
+)
+
 
 def parse_response(raw_gpt_response):
     print("Raw GPT Response")
     print(raw_gpt_response)
     # Extract summary
     # logging.info("Returning final chatgpt response data")
-    summary_start = raw_gpt_response.find('### Summary:') + len('### Summary:') + 1
-    summary_end = raw_gpt_response.find('### Technical Skills:')
+    summary_start = raw_gpt_response.find("### Summary:") + len("### Summary:") + 1
+    summary_end = raw_gpt_response.find("### Technical Skills:")
     summary = raw_gpt_response[summary_start:summary_end].strip().strip('"')
 
     # Extract technical skills
-    skills_start = raw_gpt_response.find('### Technical Skills:') + len('### Technical Skills:')
-    skills_end = raw_gpt_response.find('### Work Experience:')
+    skills_start = raw_gpt_response.find("### Technical Skills:") + len(
+        "### Technical Skills:"
+    )
+    skills_end = raw_gpt_response.find("### Work Experience:")
     skills_str = raw_gpt_response[skills_start:skills_end].strip()
     skills = json.loads(skills_str)
 
     # Extract work experience
-    experience_start = raw_gpt_response.find('### Work Experience:') + len('### Work Experience:')
+    experience_start = raw_gpt_response.find("### Work Experience:") + len(
+        "### Work Experience:"
+    )
     experience_str = raw_gpt_response[experience_start:].strip()
     experience = json.loads(experience_str)
 
     # Display the results
-    print('*'*100)
+    print("*" * 100)
     print("Summary:")
     print(type(summary))
     print(summary)
-    print('-'*100)
+    print("-" * 100)
     print("\nTechnical Skills:")
     print(type(skills))
     print(json.dumps(skills, indent=4))
-    print('-'*100)
+    print("-" * 100)
     print("\nWork Experience:")
     print(type(experience))
     print(json.dumps(experience, indent=4))
     logging.info("Parsing raw gpt response")
     return {
-        'summary': summary,
-        'skills': skills,
-        'experience': experience,
+        "summary": summary,
+        "skills": skills,
+        "experience": experience,
     }
 
 
 # parse_response(raw_gpt_response)
 json_data = parse_response(raw_gpt_response)
-output_path = './data/output/Chris Phillips Resume.docx'
+output_path = "./data/output/Chris Phillips Resume.docx"
 
 logging.info(f"Outputting final file to {output_path}")
-final_resume = create_gpt_resume(CONTACT, json_data['summary'], json_data['skills'], json_data['experience'], EDUCATION, output_path)
-
+final_resume = create_gpt_resume(
+    CONTACT,
+    json_data["summary"],
+    json_data["skills"],
+    json_data["experience"],
+    EDUCATION,
+    output_path,
+)
 
 
 print(f"Tailored resume saved to {output_path}")
-
-
-
