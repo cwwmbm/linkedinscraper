@@ -1,0 +1,7 @@
+
+repos:
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.17.0  # Use the latest version of pyupgrade
+    hooks:
+      - id: pyupgrade
+        args: ["--py38-plus"]  # Specify the Python version you're targeting
