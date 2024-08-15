@@ -1,0 +1,24 @@
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "B", "I", "C", "D", "PYUP"]
+ignore = ["W503"]  # Ignore specific PEP 8 rules if desired
+target-version = "py38"
+exclude = ["migrations", "tests"]
+
+[tool.ruff.isort]
+enabled = true
+
+[tool.ruff.flake8-annotations]
+enabled = true
+
+[tool.ruff.flake8-bugbear]
+enabled = true
+
+[tool.ruff.flake8-docstrings]
+enabled = true
+
