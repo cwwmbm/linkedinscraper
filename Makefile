@@ -55,4 +55,11 @@ run_bot:
 run_scheduled_bot:
 	@echo "Running script with schedule..."
 	@python3 main.py schedule.json
+
+# Command to clean out log folder
+clean_logs:
+	@echo "Cleaning logs..."
+	@rm -rf logs/*
+	@echo "Logs cleaned successfully."
+
 # Create command to create resume
