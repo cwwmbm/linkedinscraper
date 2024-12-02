@@ -1,7 +1,7 @@
-from app import db
+from app import db, config
 
 class Job(db.Model):
-    __tablename__ = 'jobs'
+    __tablename__ = config['jobs_tablename']
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.Text, nullable=False)
