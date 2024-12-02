@@ -19,10 +19,11 @@ If you are using this application, please be aware that LinkedIn does not allow 
 
 - Python 3.6 or higher
 - Flask
+- Flask-SQLAlchemy
+- Flask-Migrate
 - Requests
 - BeautifulSoup
 - Pandas
-- SQLite3
 - Pysocks
 
 ### Installation
@@ -31,8 +32,11 @@ If you are using this application, please be aware that LinkedIn does not allow 
 2. Install the required packages using pip: `pip install -r requirements.txt`
 3. Create a `config.json` file in the root directory of the project. See the `config.json` section below for details on the configuration options. Config_example.json is provided as an example, feel free to use it as a template.
 4. Run the scraper using the command `python main.py`. Note: run this first first to populate the database with job postings prior to running app.py.
-4. Run the application using the command `python app.py`.
-5. Open a web browser and navigate to `http://127.0.0.1:5000` to view the job postings.
+5. Run the application using the command `python app.py`.
+6. If you get an error from using the old DB model run the command
+   `python -m flask db init && python -m flask db migrate -m "initial setup" && python -m flask db upgrade`
+   and redo step 5.
+7. Open a web browser and navigate to `http://127.0.0.1:5000` to view the job postings.
 
 ### Usage
 
