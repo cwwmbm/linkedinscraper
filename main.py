@@ -133,10 +133,7 @@ def update_table(rows, model):
     db_rows = db.session.execute(query).scalars()
 
     # Create a dataframe with unique records in df that are not in df_existing
-    new_rows = []
-    for row in rows:
-        if not job_exists(db_rows, row):
-            new_rows.insert(row)
+    new_rows = [row for row in rows if not job_exists(db_rows, row)]
 
     # If there are new records, append them to the existing table
     if len(new_rows) > 0:
