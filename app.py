@@ -68,7 +68,7 @@ def job(job_id):
 @app.route('/get_all_jobs')
 def get_all_jobs():
     query = db.select(Job).order_by(Job.date.desc())
-    jobs = db.session.execute(query).scalars()
+    jobs = [job.as_dict() for job in db.session.execute(query).scalars()]
     return jsonify(jobs)
 
 @app.route('/job_details/<int:job_id>')
