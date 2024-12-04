@@ -55,13 +55,13 @@ def transform(soup):
         date_tag = item.find('time', class_='job-search-card__listdate')
         date = date_tag['datetime'] if date_tag else date_tag_new['datetime'] if date_tag_new else ''
 
-        job = Job()
-        job.title = title
-        job.company = company.text.strip().replace('\n', ' ') if company else '',
-        job.location = location.text.strip() if location else '',
-        job.date = date
-        job.job_url = job_url,
-        job.job_description = '',
+        job = Job(
+            title = title,
+            company = company.text.strip().replace('\n', ' ') if company else '',
+            location = location.text.strip() if location else '',
+            date = date,
+            job_url = job_url,
+            job_description = '')
 
         joblist.append(job)
     return joblist
