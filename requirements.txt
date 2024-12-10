@@ -17,3 +17,5 @@ langchain-openai
 langchain_google_vertexai
 langchain-google-community
 pydantic==2.9.1
+oauth2client
+gspread
