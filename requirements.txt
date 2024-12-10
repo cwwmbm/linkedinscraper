@@ -8,3 +8,12 @@ pysocks
 openai
 pdfminer.six
 flask_cors
+python-dotenv
+langchain-groq
+langgraph
+langchain-community
+# duckduckgo-search
+langchain-openai
+langchain_google_vertexai
+langchain-google-community
+

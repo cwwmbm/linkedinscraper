@@ -26,7 +26,10 @@ def get_with_retry(url, config, retries=3, delay=1):
                 r = requests.get(url, headers=config['headers'], proxies=config['proxies'], timeout=5)
             else:
                 r = requests.get(url, headers=config['headers'], timeout=5)
+            if r.status_code!= 200:
+                raise Exception(f"Failed to retrieve the URL: {url}, status code: {r.status_code}")  # Retrying on 4xx and 5xx status codes
             return BeautifulSoup(r.content, 'html.parser')
+
         except requests.exceptions.Timeout:
             print(f"Timeout occurred for URL: {url}, retrying in {delay}s...")
             tm.sleep(delay)
@@ -284,6 +287,8 @@ def main(config_file):
                 continue
             print('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
             desc_soup = get_with_retry(job['job_url'], config)
+            if not desc_soup:
+                continue
             job['job_description'] = transform_job(desc_soup)
             language = safe_detect(job['job_description'])
             if language not in config['languages']:

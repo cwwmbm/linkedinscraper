@@ -9,7 +9,7 @@ def test_proxy_connection():
   with open('config.json') as config_file:
     config = json.load(config_file)
     proxy = config['proxies']
-
+    print(f"Using proxy: {proxy}")
   # Make the first API call without using the proxy
   try:
     response1 = requests.get(url)

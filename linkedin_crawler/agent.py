@@ -4,10 +4,12 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_community.tools import DuckDuckGoSearchRun
 from typing import TypedDict
+from linkedin_crawler.llm_models import get_vertex_llm
 
 load_dotenv()
 
 llm = ChatGroq(model="llama-3.3-70b-versatile")
+llm = get_vertex_llm()
 
 
 # State
@@ -19,11 +21,11 @@ class JobState(TypedDict):
     candidate_preferences: str
     
 # Tools
-def seach_company_infr(search_query):
+def seach_company_info(search_query):
     """It searches online to find company information to get company address, phone number major projects and so on.
 
     Args:
-        company_name: name of the company
+        search_query: name of the company
     """
     
     
@@ -51,14 +53,28 @@ Matching Process:
 4. Provide detailed reasoning for the match assessment
 
 Output Format:
-- Match Percentage: [0-100%]
-- Reasoning: Detailed explanation of skill matches and gaps
-- Skill Relevance Breakdown
-
-Important Considerations:
-- Be flexible in skill interpretation
-- Highlight potential skill transferability
-- Provide constructive feedback on skill gaps
+```json
+{
+    "match_percentage": 0-100,
+    "overall_assessment": "Brief overall evaluation",
+    "matched_skills:": [
+        {
+        "skill": "Specific Skill",
+        "relevanceLevel": "High/Medium/Low",
+        "details": "Explanation of skill match"
+        }
+    ],
+    "skill_gaps": [
+        {
+        "missingSkill": "Specific Skill",
+        "criticality": "High/Medium/Low",
+        "recommendations": "Suggestions for skill development"
+        }
+    ],
+    "recommended_next_steps": [
+        "Specific actionable recommendations"
+    ]
+}
     """
     msg = f"""
     ========================================================
