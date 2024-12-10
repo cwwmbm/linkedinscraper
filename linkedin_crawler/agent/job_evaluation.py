@@ -99,8 +99,8 @@ Output Format:
     job_evaluation = extract_json(response.content)
     
         
-    match_percentage = job_evaluation.get('match_percentage', -1)
-    overall_assessment = job_evaluation.get('overall_assessment', 'N/A')
+    match_percentage = job_evaluation.get('match_percentage', None)
+    overall_assessment = job_evaluation.get('overall_assessment', None)
     recommended_next_steps = job_evaluation.get('recommended_next_steps', [])
     matched_skills = job_evaluation.get('matched_skills', [])
     skill_gaps = job_evaluation.get('skill_gaps', [])

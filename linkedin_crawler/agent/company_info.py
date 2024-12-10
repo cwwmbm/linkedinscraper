@@ -119,20 +119,21 @@ def extract_company_info(state):
     company_info_message = state['messages'][-1]
     try:
         company_info = extract_json(company_info_message.content)
-        address = company_info.get('address', 'N/A')
-        phone_number = company_info.get('phone_number', 'N/A')
-        main_products = company_info.get('main_products', [])
+        if not company_info:
+            raise ValueError("Json format not found in the response. (Agent may have not found company info online.)")
+        address = company_info.get('address', None)
+        phone_number = company_info.get('phone_number', None)
+        main_products = company_info.get('main_products', None)
 
     except Exception as e:
         print(f"Error extracting company info: {e}")
-        address = 'N/A'
-        phone_number = 'N/A'
-        main_products = 'N/A'
+        address = None
+        phone_number = None
+        main_products = None
       
-        
     return {
         'address': address,
-        'phone_numbe': phone_number,
+        'phone_number': phone_number,
         'main_products': main_products
     }
 

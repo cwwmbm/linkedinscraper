@@ -18,7 +18,7 @@ def load_config(file_name):
     with open(file_name) as f:
         return json.load(f)
 
-def get_with_retry(url, config, retries=3, delay=1):
+def get_with_retry(url, config, retries=4, delay=1):
     # Get the URL with retries and delay
     for i in range(retries):
         try:
@@ -66,15 +66,16 @@ def transform(soup):
             'date': date,
             'job_url': job_url,
             'job_description': job_description,
-            'applied': 0,
-            'hidden': 0,
-            'interview': 0,
-            'rejected': 0
         }
         joblist.append(job)
     return joblist
 
 def transform_job(soup):
+    job_details = {
+        'job_description': "None",
+        'recruiter_name': "None",
+        'recruiter_position': "None"
+    }
     div = soup.find('div', class_='description__text description__text--rich')
     if div:
         # Remove unwanted elements
@@ -91,10 +92,16 @@ def transform_job(soup):
         text = text.replace('::marker', '-')
         text = text.replace('-\n', '- ')
         text = text.replace('Show less', '').replace('Show more', '')
-        return text
-    else:
-        return "Could not find Job Description"
-
+        
+        job_details['job_description'] = text
+        
+        recruiter_div = soup.find('div', class_='message-the-recruiter')
+        if recruiter_div:  
+            job_details['recruiter_name'] = recruiter_div.find('h3', class_='base-main-card__title')
+            job_details['recruiter_position'] = recruiter_div.find('h4', class_='base-main-card__subtitle')
+            
+    return job_details
+    
 def safe_detect(text):
     try:
         return detect(text)
@@ -292,7 +299,8 @@ def main(config_file):
             if not desc_soup:
                 print('Failed to get job description: ', job['job_url'])
                 continue
-            job['job_description'] = transform_job(desc_soup)
+            job_details = transform_job(desc_soup)
+            job.update(job_details)
             language = safe_detect(job['job_description'])
             if language not in config['languages']:
                 print('Job description language not supported: ', language)
