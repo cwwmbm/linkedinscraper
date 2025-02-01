@@ -228,7 +228,9 @@ def get_jobcards(config):
     all_jobs = []
     for k in range(0, config['rounds']):
         for query in config['search_queries']:
-            keywords = quote(query['keywords']) # URL encode the keywords
+            if " " in query['keywords']:
+                keywords = quote(query['keywords']) # URL encode the keywords
+                keywords = f'"{keywords}"' # enclose the keywords in quotes for exact match
             location = quote(query['location']) # URL encode the location
             for i in range (0, config['pages_to_scrape']):
                 url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={25*i}"
