@@ -1,8 +1,6 @@
 import requests
 import json
-import sqlite3
 import sys
-from sqlite3 import Error
 from bs4 import BeautifulSoup
 import time as tm
 from itertools import groupby
@@ -11,6 +9,8 @@ import pandas as pd
 from urllib.parse import quote
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
+from models import Job, FilteredJob
+from app import db
 
 
 def load_config(file_name):
@@ -54,19 +54,15 @@ def transform(soup):
         date_tag_new = item.find('time', class_ = 'job-search-card__listdate--new')
         date_tag = item.find('time', class_='job-search-card__listdate')
         date = date_tag['datetime'] if date_tag else date_tag_new['datetime'] if date_tag_new else ''
-        job_description = ''
-        job = {
-            'title': title,
-            'company': company.text.strip().replace('\n', ' ') if company else '',
-            'location': location.text.strip() if location else '',
-            'date': date,
-            'job_url': job_url,
-            'job_description': job_description,
-            'applied': 0,
-            'hidden': 0,
-            'interview': 0,
-            'rejected': 0
-        }
+
+        job = Job(
+            title = title,
+            company = company.text.strip().replace('\n', ' ') if company else '',
+            location = location.text.strip() if location else '',
+            date = date,
+            job_url = job_url,
+            job_description = '')
+
         joblist.append(job)
     return joblist
 
@@ -99,18 +95,18 @@ def safe_detect(text):
 
 def remove_irrelevant_jobs(joblist, config):
     #Filter out jobs based on description, title, and language. Set up in config.json.
-    new_joblist = [job for job in joblist if not any(word.lower() in job['job_description'].lower() for word in config['desc_words'])]   
-    new_joblist = [job for job in new_joblist if not any(word.lower() in job['title'].lower() for word in config['title_exclude'])] if len(config['title_exclude']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if any(word.lower() in job['title'].lower() for word in config['title_include'])] if len(config['title_include']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if safe_detect(job['job_description']) in config['languages']] if len(config['languages']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if not any(word.lower() in job['company'].lower() for word in config['company_exclude'])] if len(config['company_exclude']) > 0 else new_joblist
+    new_joblist = [job for job in joblist if not any(word.lower() in job.job_description.lower() for word in config['desc_words'])]   
+    new_joblist = [job for job in new_joblist if not any(word.lower() in job.title.lower() for word in config['title_exclude'])] if len(config['title_exclude']) > 0 else new_joblist
+    new_joblist = [job for job in new_joblist if any(word.lower() in job.title.lower() for word in config['title_include'])] if len(config['title_include']) > 0 else new_joblist
+    new_joblist = [job for job in new_joblist if safe_detect(job.job_description) in config['languages']] if len(config['languages']) > 0 else new_joblist
+    new_joblist = [job for job in new_joblist if not any(word.lower() in job.company.lower() for word in config['company_exclude'])] if len(config['company_exclude']) > 0 else new_joblist
 
     return new_joblist
 
-def remove_duplicates(joblist, config):
+def remove_duplicates(joblist):
     # Remove duplicate jobs in the joblist. Duplicate is defined as having the same title and company.
-    joblist.sort(key=lambda x: (x['title'], x['company']))
-    joblist = [next(g) for k, g in groupby(joblist, key=lambda x: (x['title'], x['company']))]
+    joblist.sort(key=lambda x: (x.title, x.company))
+    joblist = [next(g) for _, g in groupby(joblist, key=lambda x: (x.title, x.company))]
     return joblist
 
 def convert_date_format(date_string):
@@ -131,102 +127,31 @@ def convert_date_format(date_string):
         print(f"Error: The date for job {date_string} - is not in the correct format.")
         return None
 
-def create_connection(config):
-    # Create a database connection to a SQLite database
-    conn = None
-    path = config['db_path']
-    try:
-        conn = sqlite3.connect(path) # creates a SQL database in the 'data' directory
-        #print(sqlite3.version)
-    except Error as e:
-        print(e)
-
-    return conn
-
-def create_table(conn, df, table_name):
-    ''''
-    # Create a new table with the data from the dataframe
-    df.to_sql(table_name, conn, if_exists='replace', index=False)
-    print (f"Created the {table_name} table and added {len(df)} records")
-    '''
-    # Create a new table with the data from the DataFrame
-    # Prepare data types mapping from pandas to SQLite
-    type_mapping = {
-        'int64': 'INTEGER',
-        'float64': 'REAL',
-        'datetime64[ns]': 'TIMESTAMP',
-        'object': 'TEXT',
-        'bool': 'INTEGER'
-    }
-    
-    # Prepare a string with column names and their types
-    columns_with_types = ', '.join(
-        f'"{column}" {type_mapping[str(df.dtypes[column])]}'
-        for column in df.columns
-    )
-    
-    # Prepare SQL query to create a new table
-    create_table_sql = f"""
-        CREATE TABLE IF NOT EXISTS "{table_name}" (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            {columns_with_types}
-        );
-    """
-    
-    # Execute SQL query
-    cursor = conn.cursor()
-    cursor.execute(create_table_sql)
-    
-    # Commit the transaction
-    conn.commit()
-
-    # Insert DataFrame records one by one
-    insert_sql = f"""
-        INSERT INTO "{table_name}" ({', '.join(f'"{column}"' for column in df.columns)})
-        VALUES ({', '.join(['?' for _ in df.columns])})
-    """
-    for record in df.to_dict(orient='records'):
-        cursor.execute(insert_sql, list(record.values()))
-    
-    # Commit the transaction
-    conn.commit()
-
-    print(f"Created the {table_name} table and added {len(df)} records")
-
-def update_table(conn, df, table_name):
+def update_table(rows, model):
     # Update the existing table with new records.
-    df_existing = pd.read_sql(f'select * from {table_name}', conn)
+    query = db.select(model)
+    db_rows = db.session.execute(query).scalars()
 
     # Create a dataframe with unique records in df that are not in df_existing
-    df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company', 'date'], keep=False)
+    new_rows = [row for row in rows if not job_exists(db_rows, row)]
 
     # If there are new records, append them to the existing table
-    if len(df_new_records) > 0:
-        df_new_records.to_sql(table_name, conn, if_exists='append', index=False)
-        print (f"Added {len(df_new_records)} new records to the {table_name} table")
+    if len(new_rows) > 0:
+        db.session.add(new_rows)
+        db.session.commit()
+        print (f"Added {len(new_rows)} new records to the {model.__tablename__} table")
     else:
-        print (f"No new records to add to the {table_name} table")
+        print (f"No new records to add to the {model.__tablename__} table")
 
-def table_exists(conn, table_name):
-    # Check if the table already exists in the database
-    cur = conn.cursor()
-    cur.execute(f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
-    if cur.fetchone()[0]==1 :
-        return True
-    return False
-
-def job_exists(df, job):
+def job_exists(job_list, job):
     # Check if the job already exists in the dataframe
-    if df.empty:
-        return False
-    #return ((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()
     #The job exists if there's already a job in the database that has the same URL
-    return ((df['job_url'] == job['job_url']).any() | (((df['title'] == job['title']) & (df['company'] == job['company']) & (df['date'] == job['date'])).any()))
+    return any(job.job_url == j.job_url | job.title == j.title & job.company == j.company & job.date == j.date for j in job_list)
 
 def get_jobcards(config):
     #Function to get the job cards from the search results page
     all_jobs = []
-    for k in range(0, config['rounds']):
+    for _ in range(0, config['rounds']):
         for query in config['search_queries']:
             keywords = quote(query['keywords']) # URL encode the keywords
             location = quote(query['location']) # URL encode the location
@@ -237,25 +162,18 @@ def get_jobcards(config):
                 all_jobs = all_jobs + jobs
                 print("Finished scraping page: ", url)
     print ("Total job cards scraped: ", len(all_jobs))
-    all_jobs = remove_duplicates(all_jobs, config)
+    all_jobs = remove_duplicates(all_jobs)
     print ("Total job cards after removing duplicates: ", len(all_jobs))
     all_jobs = remove_irrelevant_jobs(all_jobs, config)
     print ("Total job cards after removing irrelevant jobs: ", len(all_jobs))
     return all_jobs
 
-def find_new_jobs(all_jobs, conn, config):
+def find_new_jobs(all_jobs):
     # From all_jobs, find the jobs that are not already in the database. Function checks both the jobs and filtered_jobs tables.
-    jobs_tablename = config['jobs_tablename']
-    filtered_jobs_tablename = config['filtered_jobs_tablename']
-    jobs_db = pd.DataFrame()
-    filtered_jobs_db = pd.DataFrame()    
-    if conn is not None:
-        if table_exists(conn, jobs_tablename):
-            query = f"SELECT * FROM {jobs_tablename}"
-            jobs_db = pd.read_sql_query(query, conn)
-        if table_exists(conn, filtered_jobs_tablename):
-            query = f"SELECT * FROM {filtered_jobs_tablename}"
-            filtered_jobs_db = pd.read_sql_query(query, conn)
+    query = db.select(Job)
+    jobs_db = db.session.execute(query).scalars()
+    query = db.select(FilteredJob)
+    filtered_jobs_db = db.session.execute(query).scalars()
 
     new_joblist = [job for job in all_jobs if not job_exists(jobs_db, job) and not job_exists(filtered_jobs_db, job)]
     return new_joblist
@@ -265,27 +183,27 @@ def main(config_file):
     job_list = []
 
     config = load_config(config_file)
-    jobs_tablename = config['jobs_tablename'] # name of the table to store the "approved" jobs
-    filtered_jobs_tablename = config['filtered_jobs_tablename'] # name of the table to store the jobs that have been filtered out based on description keywords (so that in future they are not scraped again)
+    db.create_all()
+
     #Scrape search results page and get job cards. This step might take a while based on the number of pages and search queries.
     all_jobs = get_jobcards(config)
-    conn = create_connection(config)
+
     #filtering out jobs that are already in the database
-    all_jobs = find_new_jobs(all_jobs, conn, config)
+    all_jobs = find_new_jobs(all_jobs)
     print ("Total new jobs found after comparing to the database: ", len(all_jobs))
 
     if len(all_jobs) > 0:
 
         for job in all_jobs:
-            job_date = convert_date_format(job['date'])
+            job_date = convert_date_format(job.date)
             job_date = datetime.combine(job_date, time())
             #if job is older than a week, skip it
             if job_date < datetime.now() - timedelta(days=config['days_to_scrape']):
                 continue
-            print('Found new job: ', job['title'], 'at ', job['company'], job['job_url'])
-            desc_soup = get_with_retry(job['job_url'], config)
-            job['job_description'] = transform_job(desc_soup)
-            language = safe_detect(job['job_description'])
+            print('Found new job: ', job.title, 'at ', job.company, job.job_url)
+            desc_soup = get_with_retry(job.job_url, config)
+            job.job_description = transform_job(desc_soup)
+            language = safe_detect(job.job_description)
             if language not in config['languages']:
                 print('Job description language not supported: ', language)
                 #continue
@@ -293,31 +211,19 @@ def main(config_file):
         #Final check - removing jobs based on job description keywords words from the config file
         jobs_to_add = remove_irrelevant_jobs(job_list, config)
         print ("Total jobs to add: ", len(jobs_to_add))
-        #Create a list for jobs removed based on job description keywords - they will be added to the filtered_jobs table
-        filtered_list = [job for job in job_list if job not in jobs_to_add]
-        df = pd.DataFrame(jobs_to_add)
-        df_filtered = pd.DataFrame(filtered_list)
-        df['date_loaded'] = datetime.now()
-        df_filtered['date_loaded'] = datetime.now()
-        df['date_loaded'] = df['date_loaded'].astype(str)
-        df_filtered['date_loaded'] = df_filtered['date_loaded'].astype(str)        
+
+        for job in jobs_to_add:
+            job.date_loaded = str(datetime.now())
+        update_table(jobs_to_add, Job)
         
-        if conn is not None:
-            #Update or Create the database table for the job list
-            if table_exists(conn, jobs_tablename):
-                update_table(conn, df, jobs_tablename)
-            else:
-                create_table(conn, df, jobs_tablename)
-                
-            #Update or Create the database table for the filtered out jobs
-            if table_exists(conn, filtered_jobs_tablename):
-                update_table(conn, df_filtered, filtered_jobs_tablename)
-            else:
-                create_table(conn, df_filtered, filtered_jobs_tablename)
-        else:
-            print("Error! cannot create the database connection.")
+        filtered_list = [
+            FilteredJob(title=job.title, company=job.company, date=job.date, job_url=job.job_url)
+            for job in job_list if job not in jobs_to_add]
+        update_table(filtered_list, FilteredJob)
         
+        df = pd.DataFrame([job.as_dict() for job in jobs_to_add])
         df.to_csv('linkedin_jobs.csv', index=False, encoding='utf-8')
+        df_filtered = pd.DataFrame([job.as_dict() for job in filtered_list])
         df_filtered.to_csv('linkedin_jobs_filtered.csv', index=False, encoding='utf-8')
     else:
         print("No jobs found")
