@@ -234,6 +234,9 @@ def get_jobcards(config):
                 url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={25*i}"
                 soup = get_with_retry(url, config)
                 jobs = transform(soup)
+                if len(jobs) == 0:
+                    print(f"No jobs found for query: {query['keywords']} in {query['location']} on page {i+1}")
+                    break
                 all_jobs = all_jobs + jobs
                 print("Finished scraping page: ", url)
     print ("Total job cards scraped: ", len(all_jobs))
