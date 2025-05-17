@@ -5,32 +5,34 @@
   "headers": {
 
   },
-
   "OpenAI_API_KEY": "",
   "OpenAI_Model": "",
   "resume_path": "full local path to your resume in PDF format",
-
-  "search_queries": [    
-    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
-    {"keywords": "Python developer", "location": "USA", "f_WT": "2"}
-
+  
+  "search_queries": [
+    {"keywords": "Penetration Tester", "location": "Israel", "f_WT": ""},
+    {"keywords": "Security Researcher", "location": "Israel", "f_WT": ""},
+    {"keywords": "Application Security", "location": "Israel", "f_WT": ""},
+    {"keywords": "Offensive Security", "location": "Israel", "f_WT": ""},
+    {"keywords": "Cyber Security", "location": "Israel", "f_WT": ""},
+    {"keywords": "Cloud Security", "location": "Israel", "f_WT": ""},
+    {"keywords": "Red Team", "location": "Israel", "f_WT": ""},
+    {"keywords": "Vulnerability Researcher", "location": "Israel", "f_WT": ""},
+    {"keywords": "Cyber Security Consultant", "location": "Israel", "f_WT": ""}
   ],
-  "desc_words": [
-    "agriculture", "farm", "food safety", "manufacture", "manufacturing", "Bilingual", "chemistry", "FDA", "ICH Guideline", "21 CFR 210",
-    "biological sciences", "clinical research", "clinical trials", "drug safety", "ISO 9001", "ISO9001", "Life Sciences", "Biotech", "safety standards", "gt.school", "degree in accounting", "degree in Finance", "ISQM", "ISQM1",
-    "QA/QC", "Electrical Engineering", "IS09001"
+  "desc_words": [],
+  "title_exclude": [],
+  "title_include": [
+    "security", "penetration", "researcher", "offensive", "application security", "cyber", "cloud security", "vulnerability", "red team", "consultant"
   ],
-  "title_exclude": ["frontend", "fron end", "game"],
-  "title_include": ["python", "developer", "backend", "BE", "engineer"],
-  "company_exclude": ["ClickJobs.io"],
-  "languages": ["en"],
+  "company_exclude": [],
+  "languages": [],
   "timespan": "r84600",
   "jobs_tablename": "jobs",
   "filtered_jobs_tablename": "filtered_jobs",
   "db_path": "./data/my_database.db",
-  "pages_to_scrape": 10,
+  "pages_to_scrape": 5,
   "rounds": 1,
   "days_to_scrape": 10,
   "app_table": "jobs"
-  }
-  
+}

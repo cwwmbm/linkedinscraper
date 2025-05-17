@@ -11,6 +11,7 @@ import pandas as pd
 from urllib.parse import quote
 from langdetect import detect
 from langdetect.lang_detect_exception import LangDetectException
+from webhook import send_webhook
 
 
 def load_config(file_name):
@@ -275,7 +276,7 @@ def main(config_file):
     print ("Total new jobs found after comparing to the database: ", len(all_jobs))
 
     if len(all_jobs) > 0:
-
+        send_webhook(len(all_jobs))
         for job in all_jobs:
             job_date = convert_date_format(job['date'])
             job_date = datetime.combine(job_date, time())
