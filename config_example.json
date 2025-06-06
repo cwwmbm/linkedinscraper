@@ -9,28 +9,27 @@
   "OpenAI_API_KEY": "",
   "OpenAI_Model": "",
   "resume_path": "full local path to your resume in PDF format",
-
-  "search_queries": [    
-    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
-    {"keywords": "Python developer", "location": "USA", "f_WT": "2"}
-
-  ],
-  "desc_words": [
-    "agriculture", "farm", "food safety", "manufacture", "manufacturing", "Bilingual", "chemistry", "FDA", "ICH Guideline", "21 CFR 210",
-    "biological sciences", "clinical research", "clinical trials", "drug safety", "ISO 9001", "ISO9001", "Life Sciences", "Biotech", "safety standards", "gt.school", "degree in accounting", "degree in Finance", "ISQM", "ISQM1",
-    "QA/QC", "Electrical Engineering", "IS09001"
-  ],
-  "title_exclude": ["frontend", "fron end", "game"],
-  "title_include": ["python", "developer", "backend", "BE", "engineer"],
-  "company_exclude": ["ClickJobs.io"],
-  "languages": ["en"],
-  "timespan": "r84600",
+    "search_queries": [
+        {"keywords": "Ruby on Rails Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Ruby Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Software Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Full Stack Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Backend Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Web Developer", "location": "United States", "f_WT": ""},
+        {"keywords": "Software Engineer", "location": "United States", "f_WT": ""}
+    ],
+    "desc_words": [],
+    "title_include": ["Ruby", "Ruby on Rails", "Rails", "RSpec", "Capybara"],
+    "title_exclude": [],
+    "company_exclude": [],
+    "languages": ["en"],
+    "timespan": "r2592000",
   "jobs_tablename": "jobs",
   "filtered_jobs_tablename": "filtered_jobs",
   "db_path": "./data/my_database.db",
-  "pages_to_scrape": 10,
+  "pages_to_scrape": 5,
   "rounds": 1,
-  "days_to_scrape": 10,
+  "days_to_scrape": 1,
   "app_table": "jobs"
   }
   

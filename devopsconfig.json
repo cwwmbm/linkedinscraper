@@ -1,0 +1,42 @@
+{
+    "proxies": {
+
+    },
+    "headers": {
+
+    },
+    "OpenAI_API_KEY": "",
+    "OpenAI_Model": "",
+    "resume_path": "",
+    "search_queries": [
+        {"keywords": "DevOps", "location": "United States", "f_WT": 2},
+        {"keywords": "Cloud Engineering", "location": "United States", "f_WT": 2},
+        {"keywords": "Infrastructure Engineering", "location": "United States", "f_WT": 2},
+        {"keywords": "SRE", "location": "United States", "f_WT": 2},
+        {"keywords": "Platform Engineering", "location": "United States", "f_WT": 2},
+        {"keywords": "Automation", "location": "United States", "f_WT": 2},
+        {"keywords": "CI/CD", "location": "United States", "f_WT": 2},
+        {"keywords": "Kubernetes", "location": "United States", "f_WT": 2},
+        {"keywords": "Docker", "location": "United States", "f_WT": 2},
+        {"keywords": "AWS DevOps", "location": "United States", "f_WT": 2},
+        {"keywords": "Azure DevOps", "location": "United States", "f_WT": 2}
+    ],
+    "desc_words": [],
+    "title_include": [
+        "Engineer", "Developer", "Architect", "Specialist", 
+        "DevOps", "Cloud", "SRE", "Platform", "Automation", 
+        "Infrastructure", "Build", "Release", "CI/CD", "Systems", 
+        "IaC", "Containerization", "Monitoring", "Observability", "DevSecOps"
+    ],
+    "title_exclude": [],
+    "company_exclude": [],
+    "languages": ["en"],
+    "timespan": "r2592000",
+    "jobs_tablename": "jobs",
+    "filtered_jobs_tablename": "filtered_jobs",
+    "db_path": "./data/my_database.db",
+    "custom_csv_path": "./data/jobs.csv",
+    "pages_to_scrape": 25,
+    "rounds": 1,
+    "days_to_scrape": 30
+}

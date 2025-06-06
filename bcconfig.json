@@ -1,0 +1,42 @@
+{
+    "proxies": {
+
+    },
+    "headers": {
+
+    },
+    "OpenAI_API_KEY": "",
+    "OpenAI_Model": "",
+    "resume_path": "",
+    "search_queries": [
+        {"keywords": "Blockchain Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Blockchain Engineer", "location": "United States", "f_WT": 2},
+        {"keywords": "Smart Contract Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Smart Contract Engineer", "location": "United States", "f_WT": 2},
+        {"keywords": "DeFi Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "NFT Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Web3 Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Rust Blockchain Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Golang Blockchain Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Solidity Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Cosmos SDK Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Ethereum Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Hyperledger Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Blockchain Game Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Zero-Knowledge Proof Developer", "location": "United States", "f_WT": 2},
+        {"keywords": "Layer 2 Blockchain Developer", "location": "United States", "f_WT": 2}
+    ],
+    "desc_words": [],
+    "title_include": ["Developer", "Engineer", "Architect", "Programmer", "Software", "Blockchain", "Smart Contract", "DeFi", "NFT", "Web3"],
+    "title_exclude": [],
+    "company_exclude": [],
+    "languages": ["en"],
+    "timespan": "r2592000",
+    "jobs_tablename": "jobs",
+    "filtered_jobs_tablename": "filtered_jobs",
+    "db_path": "./data/my_database.db",
+    "custom_csv_path": "./data/jobs.csv",
+    "pages_to_scrape": 25,
+    "rounds": 1,
+    "days_to_scrape": 30
+}

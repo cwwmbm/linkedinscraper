@@ -273,6 +273,31 @@ def verify_db_schema():
 
     conn.close()
 
+def create_jobs_table_if_missing():
+    conn = sqlite3.connect(config["db_path"])
+    cursor = conn.cursor()
+    # Adjust columns as needed for your app
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            company TEXT,
+            location TEXT,
+            date TEXT,
+            job_url TEXT,
+            job_description TEXT,
+            applied INTEGER DEFAULT 0,
+            hidden INTEGER DEFAULT 0,
+            interview INTEGER DEFAULT 0,
+            rejected INTEGER DEFAULT 0,
+            cover_letter TEXT,
+            resume TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
 if __name__ == "__main__":
-    verify_db_schema()  # Verify the DB schema before running the app
+    create_jobs_table_if_missing()   # <-- Add this line
+    verify_db_schema()               # <-- This can now safely run
     app.run(debug=True, port=5001)
