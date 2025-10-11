@@ -6,14 +6,27 @@
 
   },
 
-  "OpenAI_API_KEY": "",
-  "OpenAI_Model": "",
+  "job_analysis_api_key": "",
+  "job_analysis_model": "",
+  "cover_letter_api_key": "",
+  "cover_letter_model": "",
+  "resume_api_key": "",
+  "resume_model": "",
   "resume_path": "full local path to your resume in PDF format",
 
-  "search_queries": [    
-    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
-    {"keywords": "Python developer", "location": "USA", "f_WT": "2"}
+  "analysis_questions": [
+    "What are the key responsibilities and main duties for this role?",
+    "What technical skills and qualifications are required?",
+    "What is the experience level required (junior, mid-level, senior)?",
+    "What technologies, frameworks, or tools are mentioned?",
+    "What soft skills or personal qualities are emphasized?",
+    "What does the company culture appear to be like based on the description?"
+  ],
 
+  "search_queries": [
+    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
+    {"keywords": "Python developer", "location": "USA", "f_WT": "2"},
+    {"keywords": "Software Architect", "location": "California", "f_WT": "2", "f_JT": "F", "f_E": "4,5"}
   ],
   "desc_words": [
     "agriculture", "farm", "food safety", "manufacture", "manufacturing", "Bilingual", "chemistry", "FDA", "ICH Guideline", "21 CFR 210",
@@ -23,6 +36,7 @@
   "title_exclude": ["frontend", "fron end", "game"],
   "title_include": ["python", "developer", "backend", "BE", "engineer"],
   "company_exclude": ["ClickJobs.io"],
+  "country_exclude": [],
   "languages": ["en"],
   "timespan": "r84600",
   "jobs_tablename": "jobs",
