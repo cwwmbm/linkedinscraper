@@ -15,6 +15,20 @@
 	let showAnalysis = false;
 	let config = null;
 	let contentSectionsElement;
+	let notes = '';
+	let isSavingNotes = false;
+	let saveNotesTimeout = null;
+	let notesSaved = false;
+	let toastMessage = '';
+	let showToast = false;
+
+	function showToastNotification(message) {
+		toastMessage = message;
+		showToast = true;
+		setTimeout(() => {
+			showToast = false;
+		}, 3000); // Hide after 3 seconds
+	}
 
 	// Scroll to top when job changes
 	$: if (job && contentSectionsElement) {
@@ -35,7 +49,94 @@
 
 	onMount(() => {
 		fetchConfig();
+		loadNotes();
 	});
+
+	// Load notes when job changes
+	$: if (job) {
+		loadNotes();
+	}
+
+	async function loadNotes() {
+		if (!job || !job.id) return;
+		
+		try {
+			// First try to get notes from the job object if it exists
+			if (job.notes !== undefined) {
+				notes = job.notes || '';
+				return;
+			}
+			
+			// Otherwise fetch from API
+			const response = await fetch(`/api/get_notes/${job.id}`);
+			if (response.ok) {
+				const result = await response.json();
+				notes = result.notes || '';
+				// Update the job object with the loaded notes
+				job.notes = notes;
+			}
+		} catch (error) {
+			console.error('Error loading notes:', error);
+		}
+	}
+
+	async function saveNotes() {
+		if (!job || !job.id) return;
+		
+		isSavingNotes = true;
+		notesSaved = false;
+		
+		try {
+			const response = await fetch(`/api/update_notes/${job.id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ notes })
+			});
+			
+			if (response.ok) {
+				const result = await response.json();
+				job.notes = notes;
+				
+				// Update the parent component
+				dispatch('jobUpdated', {
+					id: job.id,
+					updatedFields: { notes: job.notes },
+					fullJob: job
+				});
+				
+				notesSaved = true;
+				setTimeout(() => {
+					notesSaved = false;
+				}, 2000);
+			} else {
+				console.error('Failed to save notes:', response.status);
+			}
+		} catch (error) {
+			console.error('Error saving notes:', error);
+		} finally {
+			isSavingNotes = false;
+		}
+	}
+
+	function debouncedSaveNotes() {
+		if (saveNotesTimeout) {
+			clearTimeout(saveNotesTimeout);
+		}
+		
+		saveNotesTimeout = setTimeout(() => {
+			saveNotes();
+		}, 1000); // 1 second debounce
+	}
+
+	// Watch for notes changes and debounce save
+	$: if (notes !== undefined && job && job.id) {
+		// Only trigger save if notes actually changed from what's stored
+		if (notes !== (job.notes || '')) {
+			debouncedSaveNotes();
+		}
+	}
 
 
 	async function analyzeJob() {
@@ -64,8 +165,8 @@
 				updatedFields: { metadata: job.metadata },
 				fullJob: job
 			});
-			
-			alert('Job analysis completed successfully!');
+
+			showToastNotification('Job analysis completed successfully!');
 		} catch (error) {
 			analysisError = error.message;
 			console.error('Error analyzing job:', error);
@@ -96,7 +197,7 @@
 				updatedFields: { resume: job.resume },
 				fullJob: job
 			});
-			alert('Resume generated successfully!');
+			showToastNotification('Resume generated successfully!');
 		} catch (error) {
 			alert(`Error generating resume: ${error.message}`);
 		} finally {
@@ -126,7 +227,7 @@
 				updatedFields: { cover_letter: job.cover_letter },
 				fullJob: job
 			});
-			alert('Cover letter generated successfully!');
+			showToastNotification('Cover letter generated successfully!');
 		} catch (error) {
 			alert(`Error generating cover letter: ${error.message}`);
 		} finally {
@@ -141,10 +242,22 @@
 			});
 			
 			if (response.ok) {
-				job.applied = 1;
+				const result = await response.json();
+				job.applied = result.new_status;
+				// Clear other statuses when this one is set
+				if (result.new_status === 1) {
+					job.interview = 0;
+					job.rejected = 0;
+					job.blocked = 0;
+				}
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { applied: job.applied },
+					updatedFields: { 
+						applied: job.applied,
+						interview: job.interview,
+						rejected: job.rejected,
+						blocked: job.blocked
+					},
 					fullJob: job
 				});
 			}
@@ -160,10 +273,22 @@
 			});
 			
 			if (response.ok) {
-				job.interview = 1;
+				const result = await response.json();
+				job.interview = result.new_status;
+				// Clear other statuses when this one is set
+				if (result.new_status === 1) {
+					job.applied = 0;
+					job.rejected = 0;
+					job.blocked = 0;
+				}
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { interview: job.interview },
+					updatedFields: { 
+						applied: job.applied,
+						interview: job.interview,
+						rejected: job.rejected,
+						blocked: job.blocked
+					},
 					fullJob: job
 				});
 			}
@@ -179,15 +304,58 @@
 			});
 			
 			if (response.ok) {
-				job.rejected = 1;
+				const result = await response.json();
+				job.rejected = result.new_status;
+				// Clear other statuses when this one is set
+				if (result.new_status === 1) {
+					job.applied = 0;
+					job.interview = 0;
+					job.blocked = 0;
+				}
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { rejected: job.rejected },
+					updatedFields: { 
+						applied: job.applied,
+						interview: job.interview,
+						rejected: job.rejected,
+						blocked: job.blocked
+					},
 					fullJob: job
 				});
 			}
 		} catch (error) {
 			alert(`Error marking as rejected: ${error.message}`);
+		}
+	}
+
+	async function markAsBlocked() {
+		try {
+			const response = await fetch(`/api/mark_blocked/${job.id}`, {
+				method: 'POST'
+			});
+			
+			if (response.ok) {
+				const result = await response.json();
+				job.blocked = result.new_status;
+				// Clear other statuses when this one is set
+				if (result.new_status === 1) {
+					job.applied = 0;
+					job.interview = 0;
+					job.rejected = 0;
+				}
+				dispatch('jobUpdated', {
+					id: job.id,
+					updatedFields: { 
+						applied: job.applied,
+						interview: job.interview,
+						rejected: job.rejected,
+						blocked: job.blocked
+					},
+					fullJob: job
+				});
+			}
+		} catch (error) {
+			alert(`Error marking as blocked: ${error.message}`);
 		}
 	}
 
@@ -218,6 +386,27 @@
 		if (event.key === '`' && !event.ctrlKey && !event.altKey && !event.metaKey) {
 			event.preventDefault();
 			toggleJobVisibility();
+		} else if (event.key === '\\' && !event.ctrlKey && !event.altKey && !event.metaKey) {
+			event.preventDefault();
+			if (job.job_url) {
+				// Create a temporary link element and simulate ctrl+click to open in background tab
+				const link = document.createElement('a');
+				link.href = job.job_url;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				
+				// Simulate ctrl+click which opens in background tab
+				const clickEvent = new MouseEvent('click', {
+					ctrlKey: true,
+					metaKey: true, // For Mac compatibility
+					bubbles: true,
+					cancelable: true
+				});
+				
+				document.body.appendChild(link);
+				link.dispatchEvent(clickEvent);
+				document.body.removeChild(link);
+			}
 		}
 	}
 
@@ -273,7 +462,10 @@
 
 			// Determine if it's boolean based on config or answer format
 			const isBoolean = (questionConfig && questionConfig.type === 'boolean') ||
-				             /^[✅❌❔\s]+$/.test(answer.trim());
+				             /^[✅❌❔\s]+$/.test(answer.trim()) ||
+				             // TODO: Hardcoded rate detection - improve later with better field classification
+				             key.toLowerCase() === 'rate' ||
+				             key.toLowerCase().includes('rate');
 
 			if (isBoolean) {
 				booleanQuestions.push({ title: displayTitle, answer });
@@ -298,18 +490,7 @@
 	<div class="job-info">
 		<div class="title-section">
 			<h1 class="job-title">{job.title || 'N/A'}</h1>
-			<div class="action-buttons">
-				{#if job.job_url}
-					<a
-						href={job.job_url}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="action-btn linkedin"
-						title="View on LinkedIn"
-					>
-						🔗
-					</a>
-				{/if}
+			<div class="action-buttons desktop-buttons">
 				<button
 					class="action-btn generate"
 					on:click={generateResume}
@@ -336,27 +517,35 @@
 				</button>
 				<button
 					class="action-btn status applied"
+					class:active={job.applied}
 					on:click={markAsApplied}
-					disabled={job.applied}
-					title="Mark as Applied"
+					title={job.applied ? "Remove Applied Status" : "Mark as Applied"}
 				>
 					✓
 				</button>
 				<button
 					class="action-btn status interview"
+					class:active={job.interview}
 					on:click={markAsInterview}
-					disabled={job.interview}
-					title="Mark as Interview"
+					title={job.interview ? "Remove Interview Status" : "Mark as Interview"}
 				>
 					💬
 				</button>
 				<button
 					class="action-btn status rejected"
+					class:active={job.rejected}
 					on:click={markAsRejected}
-					disabled={job.rejected}
-					title="Mark as Rejected"
+					title={job.rejected ? "Remove Rejected Status" : "Mark as Rejected"}
 				>
 					✗
+				</button>
+				<button
+					class="action-btn status blocked"
+					class:active={job.blocked}
+					on:click={markAsBlocked}
+					title={job.blocked ? "Remove Blocked Status" : "Mark as Blocked"}
+				>
+					🚫
 				</button>
 				<button
 					class="action-btn"
@@ -369,28 +558,103 @@
 				</button>
 			</div>
 		</div>
-		
-		<div class="job-meta">
-			<div class="company">{job.company || 'N/A'}</div>
-			<div class="location">{job.location || 'N/A'}</div>
-			<div class="date">Posted: {formatDate(job.date)}</div>
+
+		<div class="job-header-info">
+			<div class="action-buttons mobile-buttons">
+				<button
+					class="action-btn generate"
+					on:click={generateResume}
+					disabled={isGeneratingResume}
+					title="Generate Resume"
+				>
+					{isGeneratingResume ? '⏳' : '📄'}
+				</button>
+				<button
+					class="action-btn generate"
+					on:click={generateCoverLetter}
+					disabled={isGeneratingCoverLetter}
+					title="Generate Cover Letter"
+				>
+					{isGeneratingCoverLetter ? '⏳' : '📝'}
+				</button>
+				<button
+					class="action-btn analyze"
+					on:click={analyzeJob}
+					disabled={isAnalyzing}
+					title="Analyze Job"
+				>
+					{isAnalyzing ? '⏳' : '🔍'}
+				</button>
+				<button
+					class="action-btn status applied"
+					class:active={job.applied}
+					on:click={markAsApplied}
+					title={job.applied ? "Remove Applied Status" : "Mark as Applied"}
+				>
+					✓
+				</button>
+				<button
+					class="action-btn status interview"
+					class:active={job.interview}
+					on:click={markAsInterview}
+					title={job.interview ? "Remove Interview Status" : "Mark as Interview"}
+				>
+					💬
+				</button>
+				<button
+					class="action-btn status rejected"
+					class:active={job.rejected}
+					on:click={markAsRejected}
+					title={job.rejected ? "Remove Rejected Status" : "Mark as Rejected"}
+				>
+					✗
+				</button>
+				<button
+					class="action-btn status blocked"
+					class:active={job.blocked}
+					on:click={markAsBlocked}
+					title={job.blocked ? "Remove Blocked Status" : "Mark as Blocked"}
+				>
+					🚫
+				</button>
+				<button
+					class="action-btn"
+					class:hide={!job.hidden}
+					class:unhide={job.hidden}
+					on:click={toggleJobVisibility}
+					title={job.hidden ? "Unhide Job (Press ` key)" : "Hide Job (Press ` key)"}
+				>
+					{job.hidden ? '👁️' : '👁️‍🗨️'}
+				</button>
+			</div>
+
+			<div class="header-info-column">
+				<div class="job-meta">
+					<div class="company">{job.company || 'N/A'}</div>
+					<div class="location">{job.location || 'N/A'}</div>
+					<div class="date">Posted: {formatDate(job.date)}</div>
+				</div>
+
+				<div class="job-status-badges">
+					{#if job.applied}
+						<span class="status applied">Applied</span>
+					{/if}
+					{#if job.interview}
+						<span class="status interview">Interview</span>
+					{/if}
+					{#if job.rejected}
+						<span class="status rejected">Rejected</span>
+					{/if}
+					{#if job.blocked}
+						<span class="status blocked">Blocked</span>
+					{/if}
+					{#if job.metadata}
+						<span class="status analyzed">Analyzed</span>
+					{/if}
+				</div>
+			</div>
 		</div>
 
-		<div class="job-status-badges">
-			{#if job.applied}
-				<span class="status applied">Applied</span>
-			{/if}
-			{#if job.interview}
-				<span class="status interview">Interview</span>
-			{/if}
-			{#if job.rejected}
-				<span class="status rejected">Rejected</span>
-			{/if}
-			{#if job.metadata}
-				<span class="status analyzed">Analyzed</span>
-			{/if}
-		</div>
-		
 		{#if analysisError}
 			<div class="error">Error: {analysisError}</div>
 		{/if}
@@ -450,7 +714,7 @@
 			<div class="section">
 				<h3>Generated Resume</h3>
 				<div class="generated-content">
-					{job.resume}
+					{@html renderMarkdown(job.resume)}
 				</div>
 			</div>
 		{/if}
@@ -459,11 +723,35 @@
 			<div class="section">
 				<h3>Generated Cover Letter</h3>
 				<div class="generated-content">
-					{job.cover_letter}
+					{@html renderMarkdown(job.cover_letter)}
 				</div>
 			</div>
 		{/if}
+
+		<div class="section">
+			<h3>
+				Notes
+				{#if isSavingNotes}
+					<span class="save-status saving">Saving...</span>
+				{:else if notesSaved}
+					<span class="save-status saved">Saved ✓</span>
+				{/if}
+			</h3>
+			<textarea
+				bind:value={notes}
+				placeholder="Add your notes about this job..."
+				class="notes-textarea"
+				rows="4"
+			></textarea>
+		</div>
 	</div>
+
+	<!-- Toast Notification -->
+	{#if showToast}
+		<div class="toast-notification" class:show={showToast}>
+			{toastMessage}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -475,6 +763,8 @@
 		border-radius: 8px;
 		border: 1px solid #e1e5e9;
 		overflow: hidden;
+		/* Ensure proper mobile height calculation */
+		position: relative;
 	}
 
 	.job-info {
@@ -555,32 +845,70 @@
 	}
 
 	.action-btn.status.applied {
+		background-color: #e8f5e8;
+		color: #28a745;
+		border: 2px solid #28a745;
+	}
+
+	.action-btn.status.applied.active {
 		background-color: #28a745;
 		color: white;
 	}
 
-	.action-btn.status.applied:hover:not(:disabled) {
+	.action-btn.status.applied:hover {
 		background-color: #218838;
+		color: white;
 		transform: translateY(-1px);
 	}
 
 	.action-btn.status.interview {
+		background-color: #e8f4fd;
+		color: #007bff;
+		border: 2px solid #007bff;
+	}
+
+	.action-btn.status.interview.active {
 		background-color: #007bff;
 		color: white;
 	}
 
-	.action-btn.status.interview:hover:not(:disabled) {
+	.action-btn.status.interview:hover {
 		background-color: #0056b3;
+		color: white;
 		transform: translateY(-1px);
 	}
 
 	.action-btn.status.rejected {
+		background-color: #fdeaea;
+		color: #dc3545;
+		border: 2px solid #dc3545;
+	}
+
+	.action-btn.status.rejected.active {
 		background-color: #dc3545;
 		color: white;
 	}
 
-	.action-btn.status.rejected:hover:not(:disabled) {
+	.action-btn.status.rejected:hover {
 		background-color: #c82333;
+		color: white;
+		transform: translateY(-1px);
+	}
+
+	.action-btn.status.blocked {
+		background-color: #f3e7ff;
+		color: #6f42c1;
+		border: 2px solid #6f42c1;
+	}
+
+	.action-btn.status.blocked.active {
+		background-color: #6f42c1;
+		color: white;
+	}
+
+	.action-btn.status.blocked:hover {
+		background-color: #5a2a98;
+		color: white;
 		transform: translateY(-1px);
 	}
 
@@ -602,6 +930,22 @@
 	.action-btn.unhide:hover:not(:disabled) {
 		background-color: #218838;
 		transform: translateY(-1px);
+	}
+
+	.job-header-info {
+		display: contents;
+	}
+
+	.mobile-buttons {
+		display: none;
+	}
+
+	.desktop-buttons {
+		display: flex;
+	}
+
+	.header-info-column {
+		display: contents;
 	}
 
 	.job-meta {
@@ -656,6 +1000,11 @@
 		color: #856404;
 	}
 
+	.status.blocked {
+		background-color: #f3e7ff;
+		color: #6f42c1;
+	}
+
 	.error {
 		color: #dc3545;
 		font-size: 0.75rem;
@@ -668,10 +1017,15 @@
 	.content-sections {
 		flex: 1;
 		overflow-y: auto;
+		overflow-x: hidden;
 		padding: 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		/* Better mobile scrolling */
+		-webkit-overflow-scrolling: touch;
+		/* Ensure content can scroll to bottom */
+		padding-bottom: 2rem;
 	}
 
 	.section {
@@ -707,35 +1061,44 @@
 
 	.boolean-row {
 		display: flex;
-		gap: 1rem;
+		gap: 0.75rem;
 		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
 	}
 
 	.boolean-item {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 0.5rem 0.75rem;
+		padding: 0.4rem 0.6rem;
 		border-left: 3px solid #0a66c2;
 		background-color: transparent;
 		margin: 0;
-		min-width: 150px;
-		flex: 1;
+		min-width: 120px;
+		flex: 1 1 auto;
+		max-width: 200px;
+		overflow: hidden;
 	}
 
 	.boolean-title {
 		color: #0a66c2;
-		font-size: 0.85rem;
+		font-size: 0.8rem;
 		font-weight: 600;
 		margin: 0;
-		margin-right: 1rem;
+		margin-right: 0.5rem;
+		flex: 1;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.boolean-answer {
 		color: #333;
-		font-size: 1rem;
+		font-size: 0.9rem;
 		font-weight: bold;
 		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
 	.text-row {
@@ -793,22 +1156,173 @@
 
 	/* Mobile responsiveness for analysis rows */
 	@media (max-width: 768px) {
+		.container {
+			padding: 0.5rem;
+		}
+
+		.job-detail {
+			border-radius: 4px;
+			/* Ensure full height on mobile */
+			max-height: 100%;
+		}
+
+		.job-info {
+			padding: 0.5rem;
+			flex-shrink: 0;
+			/* Prevent this from growing too much */
+			max-height: 30%;
+			overflow-y: auto;
+		}
+
+		.title-section {
+			display: none; /* Hide title section completely on mobile */
+		}
+
+		.desktop-buttons {
+			display: none !important;
+		}
+
+		.job-header-info {
+			display: flex;
+			gap: 0.5rem;
+			align-items: flex-start;
+		}
+
+		.mobile-buttons {
+			display: flex !important;
+			flex-wrap: wrap;
+			gap: 0.3rem;
+			width: auto;
+			max-width: 50%;
+			flex-shrink: 0;
+			align-content: flex-start;
+		}
+
+		.action-btn {
+			width: 30px;
+			height: 30px;
+			font-size: 0.8rem;
+			padding: 0;
+		}
+
+		.header-info-column {
+			display: flex;
+			flex-direction: column;
+			flex: 1;
+		}
+
+		.job-meta {
+			display: flex;
+			flex-direction: column;
+			gap: 0.2rem;
+			font-size: 0.75rem;
+			flex: 1;
+			margin-bottom: 0.5rem;
+		}
+
+		.job-status-badges {
+			gap: 0.35rem;
+		}
+
+		.status {
+			font-size: 0.7rem;
+			padding: 0.2rem 0.5rem;
+		}
+
+		.content-sections {
+			padding: 0.75rem;
+			gap: 0.75rem;
+			/* Fix iOS scrolling */
+			-webkit-overflow-scrolling: touch;
+			/* Ensure it takes remaining space and scrolls */
+			flex: 1;
+			min-height: 0;
+			overflow-y: auto;
+			overflow-x: hidden;
+		}
+
+		.section {
+			padding: 0.75rem;
+		}
+
+		.section h3 {
+			font-size: 0.95rem;
+			margin-bottom: 0.5rem;
+		}
+
+		.job-description, .generated-content {
+			font-size: 0.85rem;
+			max-height: 250px;
+		}
+
 		.boolean-row {
 			flex-direction: column;
 			gap: 0.5rem;
 		}
-		
+
 		.boolean-item {
 			min-width: auto;
+			max-width: none;
+			width: 100%;
 		}
-		
+
 		.text-row {
 			flex-direction: column;
 			gap: 1rem;
 		}
-		
+
 		.text-item {
 			min-width: auto;
+		}
+
+		.text-title {
+			font-size: 0.85rem;
+		}
+
+		.text-answer {
+			font-size: 0.8rem;
+		}
+
+		.notes-textarea {
+			font-size: 0.85rem;
+			min-height: 100px;
+		}
+	}
+
+	/* Very small mobile screens */
+	@media (max-width: 480px) {
+		.job-title {
+			font-size: 1.1rem;
+		}
+
+		.action-buttons {
+			grid-template-columns: repeat(4, 1fr);
+			gap: 0.35rem;
+		}
+
+		.action-btn {
+			height: 40px;
+			font-size: 0.9rem;
+		}
+
+		.job-meta {
+			font-size: 0.8rem;
+		}
+
+		.content-sections {
+			padding: 0.5rem;
+		}
+
+		.section {
+			padding: 0.5rem;
+		}
+
+		.section h3 {
+			font-size: 0.9rem;
+		}
+
+		.job-description, .generated-content {
+			font-size: 0.8rem;
 		}
 	}
 
@@ -837,5 +1351,81 @@
 	.job-description::-webkit-scrollbar-thumb:hover,
 	.generated-content::-webkit-scrollbar-thumb:hover {
 		background: #a8a8a8;
+	}
+
+	/* Notes section styles */
+	.notes-textarea {
+		width: 100%;
+		box-sizing: border-box;
+		min-height: 80px;
+		padding: 0.75rem;
+		border: 1px solid #e1e5e9;
+		border-radius: 4px;
+		font-family: inherit;
+		font-size: 0.9rem;
+		line-height: 1.4;
+		resize: vertical;
+		background-color: white;
+		transition: border-color 0.2s, box-shadow 0.2s;
+	}
+
+	.notes-textarea:focus {
+		outline: none;
+		border-color: #0a66c2;
+		box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
+	}
+
+	.notes-textarea::placeholder {
+		color: #999;
+		font-style: italic;
+	}
+
+	.save-status {
+		font-size: 0.75rem;
+		font-weight: normal;
+		margin-left: 0.5rem;
+	}
+
+	.save-status.saving {
+		color: #ffc107;
+	}
+
+	.save-status.saved {
+		color: #28a745;
+	}
+
+	/* Toast Notification */
+	.toast-notification {
+		position: fixed;
+		bottom: -100px;
+		left: 50%;
+		transform: translateX(-50%);
+		background-color: #28a745;
+		color: white;
+		padding: 1rem 1.5rem;
+		border-radius: 6px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		font-size: 0.9rem;
+		font-weight: 500;
+		z-index: 10000;
+		transition: bottom 0.3s ease-in-out;
+		max-width: 90%;
+		text-align: center;
+	}
+
+	.toast-notification.show {
+		bottom: 2rem;
+	}
+
+	@media (max-width: 768px) {
+		.toast-notification {
+			bottom: -100px;
+			font-size: 0.85rem;
+			padding: 0.75rem 1.25rem;
+		}
+
+		.toast-notification.show {
+			bottom: 1rem;
+		}
 	}
 </style>

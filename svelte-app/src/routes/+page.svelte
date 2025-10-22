@@ -10,25 +10,50 @@
 	let error = null;
 	let searchTerm = '';
 	let sortOrder = 'desc'; // 'asc' or 'desc'
-	let showHiddenJobs = false;
+	let selectedCategories = ['new']; // Default to showing 'new' jobs
+	let jobStats = { total: 0, not_hidden: 0, applied: 0, interview: 0, rejected: 0, blocked: 0 };
+	let dropdownOpen = false;
+	let controlsCollapsed = false; // For mobile collapsible header
+	
+	// Job category options
+	const categoryOptions = [
+		{ id: 'hidden', label: 'Hidden', color: '#6c757d' },
+		{ id: 'new', label: 'New', color: '#17a2b8' },
+		{ id: 'applied', label: 'Applied', color: '#28a745' },
+		{ id: 'interview', label: 'Interview', color: '#ffc107' },
+		{ id: 'rejected', label: 'Rejected', color: '#dc3545' },
+		{ id: 'blocked', label: 'Blocked', color: '#6f42c1' }
+	];
 
 	// Fetch jobs from Flask backend
 	async function fetchJobs() {
 		try {
 			loading = true;
-			const endpoint = showHiddenJobs ? '/api/get_all_jobs_including_hidden' : '/api/get_all_jobs';
-			const response = await fetch(endpoint);
+			// Always fetch all jobs including hidden for filtering
+			const response = await fetch('/api/get_all_jobs_including_hidden');
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
 			jobs = await response.json();
-			filteredJobs = [...jobs];
-			sortJobs();
+			filterJobsByCategories();
 		} catch (err) {
 			error = err.message;
 			console.error('Error fetching jobs:', err);
 		} finally {
 			loading = false;
+		}
+	}
+
+	// Fetch job statistics
+	async function fetchJobStats() {
+		try {
+			const response = await fetch('/api/get_job_stats');
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+			jobStats = await response.json();
+		} catch (err) {
+			console.error('Error fetching job stats:', err);
 		}
 	}
 
@@ -54,8 +79,11 @@
 			jobs = [...jobs];
 			
 			// Re-filter and sort jobs
-			filterJobs();
+			filterJobsByCategories();
 		}
+		
+		// Refetch stats since job status may have changed
+		fetchJobStats();
 	}
 
 	function sortJobs() {
@@ -66,12 +94,29 @@
 		});
 	}
 
-	function filterJobs() {
+	// Get job category based on its status
+	function getJobCategory(job) {
+		if (job.hidden === 1) return 'hidden';
+		if (job.applied === 1) return 'applied';
+		if (job.interview === 1) return 'interview';
+		if (job.rejected === 1) return 'rejected';
+		if (job.blocked === 1) return 'blocked';
+		return 'new'; // Default for jobs with no status
+	}
+
+	// Filter jobs by selected categories
+	function filterJobsByCategories() {
+		let categoryFilteredJobs = jobs.filter(job => {
+			const category = getJobCategory(job);
+			return selectedCategories.includes(category);
+		});
+		
+		// Apply search filter on top of category filter
 		if (!searchTerm.trim()) {
-			filteredJobs = [...jobs];
+			filteredJobs = categoryFilteredJobs;
 		} else {
 			const term = searchTerm.toLowerCase();
-			filteredJobs = jobs.filter(job => {
+			filteredJobs = categoryFilteredJobs.filter(job => {
 				return (
 					(job.title || '').toLowerCase().includes(term) ||
 					(job.company || '').toLowerCase().includes(term) ||
@@ -83,6 +128,23 @@
 		sortJobs();
 	}
 
+	// Toggle category selection
+	function toggleCategory(categoryId) {
+		if (selectedCategories.includes(categoryId)) {
+			selectedCategories = selectedCategories.filter(id => id !== categoryId);
+		} else {
+			selectedCategories = [...selectedCategories, categoryId];
+		}
+		filterJobsByCategories();
+	}
+
+	// Close dropdown when clicking outside
+	function handleClickOutside(event) {
+		if (dropdownOpen && !event.target.closest('.multiselect-container')) {
+			dropdownOpen = false;
+		}
+	}
+
 	function toggleSort() {
 		sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
 		sortJobs();
@@ -90,16 +152,24 @@
 
 	// Reactive statements to update filtered jobs when search term changes
 	$: if (searchTerm !== undefined) {
-		filterJobs();
+		filterJobsByCategories();
 	}
 
-	// Reactive statement to refetch jobs when show hidden toggle changes
-	$: if (showHiddenJobs !== undefined) {
-		fetchJobs();
+	// Reactive statement to re-filter when categories change
+	$: if (selectedCategories !== undefined) {
+		filterJobsByCategories();
 	}
 
 	onMount(() => {
 		fetchJobs();
+		fetchJobStats();
+		
+		// Add click outside listener
+		document.addEventListener('click', handleClickOutside);
+		
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
 	});
 </script>
 
@@ -116,36 +186,78 @@
 		</div>
 	{:else}
 		<!-- Search and Sort Controls -->
-		<div class="controls">
-			<div class="search-container">
-				<input
-					type="text"
-					placeholder="Search jobs, companies, locations..."
-					bind:value={searchTerm}
-					class="search-input"
-				/>
-				<span class="search-icon">🔍</span>
-			</div>
-			<button on:click={toggleSort} class="sort-btn">
-				Sort by Date {sortOrder === 'desc' ? '↓' : '↑'}
+		<div class="controls" class:collapsed={controlsCollapsed}>
+			<button class="collapse-toggle" on:click={() => controlsCollapsed = !controlsCollapsed}>
+				{controlsCollapsed ? '▼' : '▲'} Filters
+				<span class="job-count-inline">({filteredJobs.length}/{jobStats.total >= 100 ? '100+' : jobStats.total})</span>
 			</button>
-			<label class="toggle-container">
-				<input
-					type="checkbox"
-					bind:checked={showHiddenJobs}
-					class="toggle-checkbox"
-				/>
-				<span class="toggle-label">Show Hidden Jobs</span>
-			</label>
-			<div class="job-count">
-				{filteredJobs.length} of {jobs.length} jobs
-			</div>
+
+			{#if !controlsCollapsed}
+				<div class="controls-content">
+					<div class="search-container">
+						<input
+							type="text"
+							placeholder="Search jobs, companies, locations..."
+							bind:value={searchTerm}
+							class="search-input"
+						/>
+						<span class="search-icon">🔍</span>
+					</div>
+					<button on:click={toggleSort} class="sort-btn">
+						Sort by Date {sortOrder === 'desc' ? '↓' : '↑'}
+					</button>
+
+					<!-- Category Filter Multi-Select Dropdown -->
+					<div class="category-filter">
+						<span class="filter-label">Show:</span>
+						<div class="multiselect-container">
+							<button
+								class="multiselect-trigger"
+								on:click={() => dropdownOpen = !dropdownOpen}
+								type="button"
+							>
+								<span class="selected-text">
+									{#if selectedCategories.length === 0}
+										Select categories...
+									{:else if selectedCategories.length === 1}
+										{categoryOptions.find(c => c.id === selectedCategories[0])?.label}
+									{:else}
+										{selectedCategories.length} categories selected
+									{/if}
+								</span>
+								<span class="dropdown-arrow">{dropdownOpen ? '↑' : '↓'}</span>
+							</button>
+
+							{#if dropdownOpen}
+								<div class="multiselect-dropdown">
+									{#each categoryOptions as category}
+										<label class="dropdown-option" style="--category-color: {category.color}">
+											<input
+												type="checkbox"
+												checked={selectedCategories.includes(category.id)}
+												on:change={() => toggleCategory(category.id)}
+												class="option-checkbox"
+											/>
+											<span class="option-label">{category.label}</span>
+											<span class="category-dot" style="background-color: {category.color}"></span>
+										</label>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
+
+					<div class="job-count">
+						Showing {filteredJobs.length} of {jobStats.total >= 100 ? '100+' : jobStats.total} jobs
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Two-Panel Layout -->
 		<div class="main-content">
 			<div class="left-panel">
-				<JobList jobs={filteredJobs} {selectedJob} on:selectJob={(e) => selectJob(e.detail)} />
+				<JobList jobs={filteredJobs} {selectedJob} on:selectJob={(e) => selectJob(e.detail)} on:jobUpdated={handleJobUpdate} />
 			</div>
 			<div class="right-panel">
 				{#if selectedJob}
@@ -182,6 +294,20 @@
 		background-color: #f8f9fa;
 		border-radius: 8px;
 		flex-shrink: 0;
+		flex-wrap: wrap;
+	}
+
+	.collapse-toggle {
+		display: none;
+	}
+
+	.controls-content {
+		display: contents;
+	}
+
+	.job-count-inline {
+		font-size: 0.85rem;
+		color: #666;
 	}
 
 	.search-container {
@@ -229,25 +355,112 @@
 		background-color: #004182;
 	}
 
-	.toggle-container {
+	.category-filter {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		cursor: pointer;
+		gap: 0.75rem;
 		white-space: nowrap;
 	}
 
-	.toggle-checkbox {
+	.filter-label {
+		font-size: 0.9rem;
+		color: #333;
+		font-weight: 500;
+	}
+
+	.multiselect-container {
+		position: relative;
+		min-width: 200px;
+	}
+
+	.multiselect-trigger {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		background-color: white;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: border-color 0.2s;
+	}
+
+	.multiselect-trigger:hover {
+		border-color: #0a66c2;
+	}
+
+	.multiselect-trigger:focus {
+		outline: none;
+		border-color: #0a66c2;
+		box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.1);
+	}
+
+	.selected-text {
+		flex: 1;
+		text-align: left;
+		color: #333;
+	}
+
+	.dropdown-arrow {
+		color: #666;
+		font-size: 0.8rem;
+		margin-left: 0.5rem;
+	}
+
+	.multiselect-dropdown {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background-color: white;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		z-index: 1000;
+		max-height: 200px;
+		overflow-y: auto;
+	}
+
+	.dropdown-option {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		cursor: pointer;
+		transition: background-color 0.2s;
+		border-bottom: 1px solid #f0f0f0;
+	}
+
+	.dropdown-option:last-child {
+		border-bottom: none;
+	}
+
+	.dropdown-option:hover {
+		background-color: #f8f9fa;
+	}
+
+	.option-checkbox {
 		width: 16px;
 		height: 16px;
 		cursor: pointer;
+		accent-color: var(--category-color);
 	}
 
-	.toggle-label {
+	.option-label {
+		flex: 1;
 		font-size: 0.9rem;
 		color: #333;
 		cursor: pointer;
 		user-select: none;
+	}
+
+	.category-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 
 	.job-count {
@@ -342,22 +555,94 @@
 	}
 
 	@media (max-width: 768px) {
+		.container {
+			padding: 0.5rem;
+			height: 100vh;
+			height: 100dvh; /* Dynamic viewport height for mobile browsers */
+		}
+
 		.main-content {
 			flex-direction: column;
+			overflow: hidden;
 		}
-		
+
 		.left-panel {
 			width: 100%;
-			height: 300px;
+			height: 180px;
+			flex-shrink: 0;
 		}
-		
+
+		.right-panel {
+			flex: 1;
+			min-height: 0;
+			overflow: hidden;
+		}
+
 		.controls {
 			flex-direction: column;
 			align-items: stretch;
+			gap: 0;
+			padding: 0;
+			margin-bottom: 0.5rem;
+			background-color: transparent;
+			border-radius: 0;
 		}
-		
+
+		.controls.collapsed {
+			padding: 0;
+		}
+
+		.collapse-toggle {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			width: 100%;
+			padding: 0.5rem;
+			background-color: #f8f9fa;
+			border: 1px solid #e1e5e9;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 0.9rem;
+			font-weight: 500;
+			color: #333;
+			transition: background-color 0.2s;
+		}
+
+		.collapse-toggle:hover {
+			background-color: #e9ecef;
+		}
+
+		.controls-content {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+			padding: 0.5rem;
+			background-color: #f8f9fa;
+			border: 1px solid #e1e5e9;
+			border-radius: 6px;
+			margin-top: 0.5rem;
+		}
+
 		.search-container {
 			max-width: none;
+		}
+
+		.sort-btn {
+			width: 100%;
+			padding: 0.6rem;
+		}
+
+		.category-filter {
+			width: 100%;
+		}
+
+		.multiselect-container {
+			width: 100%;
+		}
+
+		.job-count {
+			text-align: center;
+			font-size: 0.85rem;
 		}
 	}
 </style>

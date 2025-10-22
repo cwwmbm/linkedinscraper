@@ -109,7 +109,7 @@ def job(job_id):
     jobs = read_jobs_from_db()
     return render_template('./templates/job_description.html', job=jobs[job_id])
 
-@app.route('/get_all_jobs')
+@app.route('/api/get_all_jobs')
 def get_all_jobs():
     conn = sqlite3.connect(config["db_path"])
     query = "SELECT * FROM jobs WHERE hidden = 0"
@@ -120,7 +120,7 @@ def get_all_jobs():
     conn.close()
     return jsonify(jobs)
 
-@app.route('/get_all_jobs_including_hidden')
+@app.route('/api/get_all_jobs_including_hidden')
 def get_all_jobs_including_hidden():
     conn = sqlite3.connect(config["db_path"])
     query = "SELECT * FROM jobs"
@@ -131,7 +131,7 @@ def get_all_jobs_including_hidden():
     conn.close()
     return jsonify(jobs)
 
-@app.route('/job_details/<int:job_id>')
+@app.route('/api/job_details/<int:job_id>')
 def job_details(job_id):
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
@@ -147,7 +147,7 @@ def job_details(job_id):
     else:
         return jsonify({"error": "Job not found"}), 404
 
-@app.route('/hide_job/<int:job_id>', methods=['POST'])
+@app.route('/api/hide_job/<int:job_id>', methods=['POST'])
 def hide_job(job_id):
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
@@ -156,7 +156,7 @@ def hide_job(job_id):
     conn.close()
     return jsonify({"success": "Job marked as hidden"}), 200
 
-@app.route('/unhide_job/<int:job_id>', methods=['POST'])
+@app.route('/api/unhide_job/<int:job_id>', methods=['POST'])
 def unhide_job(job_id):
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
@@ -166,43 +166,99 @@ def unhide_job(job_id):
     return jsonify({"success": "Job marked as visible"}), 200
 
 
-@app.route('/mark_applied/<int:job_id>', methods=['POST'])
+@app.route('/api/mark_applied/<int:job_id>', methods=['POST'])
 def mark_applied(job_id):
     print("Applied clicked!")
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
-    query = "UPDATE jobs SET applied = 1 WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id}')  # Log the query
+    
+    # Get current status
+    cursor.execute("SELECT applied FROM jobs WHERE id = ?", (job_id,))
+    current_status = cursor.fetchone()[0]
+    new_status = 1 - current_status  # Toggle: 0->1, 1->0
+    
+    # Update with toggle and clear other statuses if setting to 1
+    if new_status == 1:
+        query = "UPDATE jobs SET applied = 1, interview = 0, rejected = 0, blocked = 0 WHERE id = ?"
+    else:
+        query = "UPDATE jobs SET applied = 0 WHERE id = ?"
+    
+    print(f'Executing query: {query} with job_id: {job_id}')
     cursor.execute(query, (job_id,))
     conn.commit()
     conn.close()
-    return jsonify({"success": "Job marked as applied"}), 200
+    return jsonify({"success": "Job status updated", "new_status": new_status}), 200
 
-@app.route('/mark_interview/<int:job_id>', methods=['POST'])
+@app.route('/api/mark_interview/<int:job_id>', methods=['POST'])
 def mark_interview(job_id):
     print("Interview clicked!")
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
-    query = "UPDATE jobs SET interview = 1 WHERE id = ?"
+    
+    # Get current status
+    cursor.execute("SELECT interview FROM jobs WHERE id = ?", (job_id,))
+    current_status = cursor.fetchone()[0]
+    new_status = 1 - current_status  # Toggle: 0->1, 1->0
+    
+    # Update with toggle and clear other statuses if setting to 1
+    if new_status == 1:
+        query = "UPDATE jobs SET interview = 1, applied = 0, rejected = 0, blocked = 0 WHERE id = ?"
+    else:
+        query = "UPDATE jobs SET interview = 0 WHERE id = ?"
+    
     print(f'Executing query: {query} with job_id: {job_id}')
     cursor.execute(query, (job_id,))
     conn.commit()
     conn.close()
-    return jsonify({"success": "Job marked as interview"}), 200
+    return jsonify({"success": "Job status updated", "new_status": new_status}), 200
 
-@app.route('/mark_rejected/<int:job_id>', methods=['POST'])
+@app.route('/api/mark_rejected/<int:job_id>', methods=['POST'])
 def mark_rejected(job_id):
     print("Rejected clicked!")
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
-    query = "UPDATE jobs SET rejected = 1 WHERE id = ?"
+    
+    # Get current status
+    cursor.execute("SELECT rejected FROM jobs WHERE id = ?", (job_id,))
+    current_status = cursor.fetchone()[0]
+    new_status = 1 - current_status  # Toggle: 0->1, 1->0
+    
+    # Update with toggle and clear other statuses if setting to 1
+    if new_status == 1:
+        query = "UPDATE jobs SET rejected = 1, applied = 0, interview = 0, blocked = 0 WHERE id = ?"
+    else:
+        query = "UPDATE jobs SET rejected = 0 WHERE id = ?"
+    
     print(f'Executing query: {query} with job_id: {job_id}')
     cursor.execute(query, (job_id,))
     conn.commit()
     conn.close()
-    return jsonify({"success": "Job marked as rejected"}), 200
+    return jsonify({"success": "Job status updated", "new_status": new_status}), 200
 
-@app.route('/get_cover_letter/<int:job_id>')
+@app.route('/api/mark_blocked/<int:job_id>', methods=['POST'])
+def mark_blocked(job_id):
+    print("Blocked clicked!")
+    conn = sqlite3.connect(config["db_path"])
+    cursor = conn.cursor()
+    
+    # Get current status
+    cursor.execute("SELECT blocked FROM jobs WHERE id = ?", (job_id,))
+    current_status = cursor.fetchone()[0]
+    new_status = 1 - current_status  # Toggle: 0->1, 1->0
+    
+    # Update with toggle and clear other statuses if setting to 1
+    if new_status == 1:
+        query = "UPDATE jobs SET blocked = 1, applied = 0, interview = 0, rejected = 0 WHERE id = ?"
+    else:
+        query = "UPDATE jobs SET blocked = 0 WHERE id = ?"
+    
+    print(f'Executing query: {query} with job_id: {job_id}')
+    cursor.execute(query, (job_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": "Job status updated", "new_status": new_status}), 200
+
+@app.route('/api/get_cover_letter/<int:job_id>')
 def get_cover_letter(job_id):
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
@@ -214,7 +270,7 @@ def get_cover_letter(job_id):
     else:
         return jsonify({"error": "Cover letter not found"}), 404
 
-@app.route('/get_resume/<int:job_id>', methods=['POST'])
+@app.route('/api/get_resume/<int:job_id>', methods=['POST'])
 def get_resume(job_id):
     print("Resume clicked!")
     conn = sqlite3.connect(config["db_path"])
@@ -254,7 +310,7 @@ def get_resume(job_id):
     conn.close()
     return jsonify({"resume": response}), 200
 
-@app.route('/get_CoverLetter/<int:job_id>', methods=['POST'])
+@app.route('/api/get_CoverLetter/<int:job_id>', methods=['POST'])
 def get_CoverLetter(job_id):
     print("CoverLetter clicked!")
     conn = sqlite3.connect(config["db_path"])
@@ -298,7 +354,7 @@ def get_CoverLetter(job_id):
     conn.close()
     return jsonify({"cover_letter": response}), 200
 
-@app.route('/analyze_job/<int:job_id>', methods=['POST'])
+@app.route('/api/analyze_job/<int:job_id>', methods=['POST'])
 def analyze_job(job_id):
     """Analyze a job description using predefined questions from config"""
     print(f"Analyzing job {job_id}")
@@ -382,6 +438,95 @@ def get_config():
         print(f"Error getting config: {e}")
         return jsonify({"error": f"Error getting config: {e}"}), 500
 
+@app.route('/api/get_notes/<int:job_id>')
+def get_notes(job_id):
+    """Get notes for a specific job"""
+    try:
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        cursor.execute("SELECT notes FROM jobs WHERE id = ?", (job_id,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result is not None:
+            return jsonify({"notes": result[0] or ""}), 200
+        else:
+            return jsonify({"error": "Job not found"}), 404
+    except Exception as e:
+        print(f"Error getting notes for job {job_id}: {e}")
+        return jsonify({"error": f"Error getting notes: {e}"}), 500
+
+@app.route('/api/update_notes/<int:job_id>', methods=['PUT'])
+def update_notes(job_id):
+    """Update notes for a specific job"""
+    try:
+        from flask import request
+        data = request.get_json()
+        
+        if not data or 'notes' not in data:
+            return jsonify({"error": "Notes content is required"}), 400
+            
+        notes = data['notes']
+        
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        
+        # Check if job exists
+        cursor.execute("SELECT id FROM jobs WHERE id = ?", (job_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": "Job not found"}), 404
+        
+        # Update notes
+        cursor.execute("UPDATE jobs SET notes = ? WHERE id = ?", (notes, job_id))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": "Notes updated successfully", "notes": notes}), 200
+        
+    except Exception as e:
+        print(f"Error updating notes for job {job_id}: {e}")
+        return jsonify({"error": f"Error updating notes: {e}"}), 500
+
+@app.route('/api/get_job_stats')
+def get_job_stats():
+    conn = sqlite3.connect(config["db_path"])
+    cursor = conn.cursor()
+    
+    # Get total jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs")
+    total_jobs = cursor.fetchone()[0]
+    
+    # Get not hidden jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE hidden = 0")
+    not_hidden = cursor.fetchone()[0]
+    
+    # Get applied jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE applied = 1")
+    applied = cursor.fetchone()[0]
+    
+    # Get interview jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE interview = 1")
+    interview = cursor.fetchone()[0]
+    
+    # Get rejected jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE rejected = 1")
+    rejected = cursor.fetchone()[0]
+    
+    # Get blocked jobs
+    cursor.execute("SELECT COUNT(*) FROM jobs WHERE blocked = 1")
+    blocked = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return jsonify({
+        "total": total_jobs,
+        "not_hidden": not_hidden,
+        "applied": applied,
+        "interview": interview,
+        "rejected": rejected,
+        "blocked": blocked
+    })
 
 def read_jobs_from_db():
     conn = sqlite3.connect(config["db_path"])
@@ -414,6 +559,16 @@ def verify_db_schema():
         # If it doesn't exist, add it
         cursor.execute("ALTER TABLE jobs ADD COLUMN metadata TEXT")
         print("Added metadata column to jobs table")
+
+    if "notes" not in [column[1] for column in table_info]:
+        # If it doesn't exist, add it
+        cursor.execute("ALTER TABLE jobs ADD COLUMN notes TEXT")
+        print("Added notes column to jobs table")
+
+    if "blocked" not in [column[1] for column in table_info]:
+        # If it doesn't exist, add it
+        cursor.execute("ALTER TABLE jobs ADD COLUMN blocked INTEGER DEFAULT 0")
+        print("Added blocked column to jobs table")
 
     conn.close()
 

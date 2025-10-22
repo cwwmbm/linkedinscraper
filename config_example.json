@@ -13,6 +13,8 @@
   "resume_api_key": "",
   "resume_model": "",
   "resume_path": "full local path to your resume in PDF format",
+  "page_scraper_api_key": "",
+  "page_scraper_model": "",
 
   "analysis_questions": [
     "What are the key responsibilities and main duties for this role?",

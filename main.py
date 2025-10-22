@@ -34,7 +34,8 @@ def verify_db_schema(conn):
     required_columns = [
         ('cover_letter', 'TEXT'),
         ('resume', 'TEXT'),
-        ('metadata', 'TEXT')
+        ('metadata', 'TEXT'),
+        ('notes', 'TEXT')
     ]
 
     # Add missing columns
@@ -175,20 +176,69 @@ def safe_detect(text):
 
 def remove_irrelevant_jobs(joblist, config):
     #Filter out jobs based on description, title, and language. Set up in config.json.
-    new_joblist = [job for job in joblist if not any(word.lower() in job['job_description'].lower() for word in config['desc_words'])]   
-    new_joblist = [job for job in new_joblist if not any(word.lower() in job['title'].lower() for word in config['title_exclude'])] if len(config['title_exclude']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if any(word.lower() in job['title'].lower() for word in config['title_include'])] if len(config['title_include']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if safe_detect(job['job_description']) in config['languages']] if len(config['languages']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if not any(word.lower() in job['company'].lower() for word in config['company_exclude'])] if len(config['company_exclude']) > 0 else new_joblist
-    new_joblist = [job for job in new_joblist if not any(word.lower() in job['location'].lower() for word in config['country_exclude'])] if len(config['country_exclude']) > 0 else new_joblist
+    filtered_jobs = []
 
-    return new_joblist
+    for job in joblist:
+        discard_reason = None
+
+        # Check desc_words
+        if config.get('desc_words') and any(word.lower() in job['job_description'].lower() for word in config['desc_words']):
+            discard_reason = f"Contains excluded keyword in description: {[word for word in config['desc_words'] if word.lower() in job['job_description'].lower()]}"
+
+        # Check title_exclude
+        elif config.get('title_exclude') and len(config['title_exclude']) > 0:
+            if any(word.lower() in job['title'].lower() for word in config['title_exclude']):
+                discard_reason = f"Contains excluded keyword in title: {[word for word in config['title_exclude'] if word.lower() in job['title'].lower()]}"
+
+        # Check title_include
+        if not discard_reason and config.get('title_include') and len(config['title_include']) > 0:
+            if not any(word.lower() in job['title'].lower() for word in config['title_include']):
+                discard_reason = f"Does not contain required keyword in title. Required: {config['title_include']}"
+
+        # Check language
+        if not discard_reason and config.get('languages') and len(config['languages']) > 0:
+            detected_lang = safe_detect(job['job_description'])
+            if detected_lang not in config['languages']:
+                discard_reason = f"Language '{detected_lang}' not in allowed languages: {config['languages']}"
+
+        # Check company_exclude
+        if not discard_reason and config.get('company_exclude') and len(config['company_exclude']) > 0:
+            if any(word.lower() in job['company'].lower() for word in config['company_exclude']):
+                discard_reason = f"Contains excluded company: {[word for word in config['company_exclude'] if word.lower() in job['company'].lower()]}"
+
+        # Check country_exclude
+        if not discard_reason and config.get('country_exclude') and len(config['country_exclude']) > 0:
+            if any(word.lower() in job['location'].lower() for word in config['country_exclude']):
+                discard_reason = f"Contains excluded location: {[word for word in config['country_exclude'] if word.lower() in job['location'].lower()]}"
+
+        if discard_reason:
+            print(f"  DISCARDED: {job['title']} at {job['company']} - {discard_reason}")
+        else:
+            filtered_jobs.append(job)
+
+    return filtered_jobs
 
 def remove_duplicates(joblist, config):
     # Remove duplicate jobs in the joblist. Duplicate is defined as having the same title and company.
     joblist.sort(key=lambda x: (x['title'], x['company']))
-    joblist = [next(g) for k, g in groupby(joblist, key=lambda x: (x['title'], x['company']))]
-    return joblist
+
+    unique_jobs = []
+    seen = set()
+    duplicate_count = 0
+
+    for job in joblist:
+        key = (job['title'], job['company'])
+        if key not in seen:
+            seen.add(key)
+            unique_jobs.append(job)
+        else:
+            duplicate_count += 1
+            print(f"  DUPLICATE REMOVED: {job['title']} at {job['company']}")
+
+    if duplicate_count > 0:
+        print(f"Total duplicates removed: {duplicate_count}")
+
+    return unique_jobs
 
 def convert_date_format(date_string):
     """
@@ -240,7 +290,8 @@ def create_table(conn, table_name):
             date_loaded TEXT,
             cover_letter TEXT,
             resume TEXT,
-            metadata TEXT
+            metadata TEXT,
+            notes TEXT
         );
     """
     try:
@@ -348,7 +399,7 @@ def find_new_jobs(all_jobs, conn, config):
     jobs_tablename = config['jobs_tablename']
     filtered_jobs_tablename = config['filtered_jobs_tablename']
     jobs_db = pd.DataFrame()
-    filtered_jobs_db = pd.DataFrame()    
+    filtered_jobs_db = pd.DataFrame()
     if conn is not None:
         if table_exists(conn, jobs_tablename):
             query = f"SELECT * FROM {jobs_tablename}"
@@ -357,7 +408,22 @@ def find_new_jobs(all_jobs, conn, config):
             query = f"SELECT * FROM {filtered_jobs_tablename}"
             filtered_jobs_db = pd.read_sql_query(query, conn)
 
-    new_joblist = [job for job in all_jobs if not job_exists(jobs_db, job) and not job_exists(filtered_jobs_db, job)]
+    new_joblist = []
+    skipped_count = 0
+
+    for job in all_jobs:
+        if job_exists(jobs_db, job):
+            skipped_count += 1
+            print(f"  SKIPPED (already in jobs table): {job['title']} at {job['company']}")
+        elif job_exists(filtered_jobs_db, job):
+            skipped_count += 1
+            print(f"  SKIPPED (already in filtered_jobs table): {job['title']} at {job['company']}")
+        else:
+            new_joblist.append(job)
+
+    if skipped_count > 0:
+        print(f"Total jobs skipped (already in database): {skipped_count}")
+
     return new_joblist
 
 def call_openrouter_api(prompt, operation_type="job_analysis", model=None, config=None):
@@ -376,6 +442,10 @@ def call_openrouter_api(prompt, operation_type="job_analysis", model=None, confi
         "resume": {
             "api_key": "resume_api_key",
             "model": "resume_model"
+        },
+        "page_scraper": {
+            "api_key": "page_scraper_api_key",
+            "model": "page_scraper_model"
         }
     }
     
@@ -820,6 +890,124 @@ def refilter_jobs(config, conn):
         print(f"Error during refiltering: {e}")
         conn.rollback()
 
+def scrape_single_page(url, config, conn):
+    """Scrape a single job page URL, parse it with AI, and add to database"""
+    print(f"\nScraping single page: {url}")
+    
+    try:
+        # Fetch the page content
+        soup = get_with_retry(url, config)
+        if not soup:
+            print("Failed to fetch the page")
+            return False
+        
+        # Extract the raw HTML content
+        page_content = str(soup)
+        
+        # Create prompt for AI to parse the job information
+        prompt = f"""Please analyze this job page and extract the job information in JSON format. 
+        
+The JSON should contain the following fields that match a jobs database table:
+- title: Job title (string)
+- company: Company name (string) 
+- location: Job location (string)
+- date: Job posting date in YYYY-MM-DD format if available, or today's date (string)
+- job_url: The provided URL (string)
+- job_description: Full job description text (string)
+
+Please extract all available information from this job page HTML:
+
+{page_content}
+
+IMPORTANT: Return ONLY the raw JSON object with no markdown formatting, no code blocks, no backticks, no additional text or explanation. Start your response directly with {{ and end with }}."""
+
+        # Call AI to parse the page
+        ai_response = call_openrouter_api(prompt, operation_type="page_scraper", config=config)
+        
+        if not ai_response:
+            print("Failed to get AI response for page parsing")
+            return False
+            
+        # Parse the JSON response
+        try:
+            job_data = json.loads(ai_response)
+        except json.JSONDecodeError as e:
+            # Try to clean the response if it's wrapped in markdown
+            cleaned_response = ai_response.strip()
+            if cleaned_response.startswith('```json'):
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+            if cleaned_response.startswith('```'):
+                cleaned_response = cleaned_response[3:]   # Remove ```
+            if cleaned_response.endswith('```'):
+                cleaned_response = cleaned_response[:-3]  # Remove trailing ```
+            cleaned_response = cleaned_response.strip()
+            
+            try:
+                job_data = json.loads(cleaned_response)
+                print("Successfully parsed JSON after cleaning markdown formatting")
+            except json.JSONDecodeError as e2:
+                print(f"Failed to parse AI response as JSON even after cleaning: {e2}")
+                print(f"Original AI Response: {ai_response}")
+                print(f"Cleaned Response: {cleaned_response}")
+                return False
+            
+        # Validate required fields
+        required_fields = ['title', 'company', 'location', 'date', 'job_url', 'job_description']
+        for field in required_fields:
+            if field not in job_data:
+                job_data[field] = ''
+                
+        # Set default values for database fields
+        job_data['applied'] = 0
+        job_data['hidden'] = 0
+        job_data['interview'] = 0
+        job_data['rejected'] = 0
+        job_data['date_loaded'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Ensure the URL matches what was provided
+        job_data['job_url'] = url
+        
+        print(f"Extracted job: {job_data['title']} at {job_data['company']}")
+        
+        # Check if job already exists
+        jobs_tablename = config['jobs_tablename']
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM {jobs_tablename} WHERE job_url = ?", (url,))
+        if cursor.fetchone()[0] > 0:
+            print("Job already exists in database")
+            return False
+            
+        # Insert into database
+        df = pd.DataFrame([job_data])
+        
+        if not table_exists(conn, jobs_tablename):
+            create_table(conn, jobs_tablename)
+            
+        df.to_sql(jobs_tablename, conn, if_exists='append', index=False)
+        print("Job added to database successfully")
+        
+        # Get the job ID for analysis
+        cursor.execute(f"SELECT id FROM {jobs_tablename} WHERE job_url = ?", (url,))
+        job_id = cursor.fetchone()[0]
+        
+        # Analyze the job
+        print(f"Analyzing job {job_id}...")
+        analysis_results = analyze_job_description(job_id, job_data['job_description'], job_data['title'], config)
+        
+        if analysis_results:
+            metadata_json = json.dumps(analysis_results, indent=2)
+            cursor.execute(f"UPDATE {jobs_tablename} SET metadata = ? WHERE id = ?", (metadata_json, job_id))
+            conn.commit()
+            print(f"Analysis completed for job {job_id}")
+        else:
+            print(f"Failed to analyze job {job_id}")
+            
+        return True
+        
+    except Exception as e:
+        print(f"Error scraping single page: {e}")
+        return False
+
 def rescrape_failed_jobs(config, conn):
     """Rescrape jobs whose description is 'Could not find Job Description'
 
@@ -917,6 +1105,7 @@ Examples:
   python main.py --analyze --analyze-mode not-hidden   # Analyze all non-hidden jobs
   python main.py --analyze --analyze-mode all          # Analyze all jobs
   python main.py --scrape --analyze                    # Scrape and analyze
+  python main.py --scrape-single-page URL1 URL2 ...   # Scrape and analyze one or more job page URLs
   python main.py --refilter                            # Hide visible jobs that fail filters
   python main.py --rescrape-failed                     # Rescrape jobs with failed descriptions
   python main.py --export-csv                          # Export database to CSV
@@ -946,6 +1135,8 @@ Examples:
                         help='Create a backup of the database')
     parser.add_argument('--full', action='store_true',
                         help='Run full pipeline: scrape + analyze (default if no flags specified)')
+    parser.add_argument('--scrape-single-page', type=str, nargs='+', metavar='URL',
+                        help='Scrape one or more job page URLs, parse them with AI, and add to database')
 
     args = parser.parse_args()
 
@@ -960,12 +1151,12 @@ Examples:
         sys.exit(1)
 
     # If no action flags specified, default to --full
-    if not any([args.scrape, args.analyze, args.export_csv, args.backup_db, args.refilter, args.rescrape_failed, args.full]):
+    if not any([args.scrape, args.analyze, args.export_csv, args.backup_db, args.refilter, args.rescrape_failed, args.full, args.scrape_single_page]):
         args.full = True
 
     # Create database connection if needed
     conn = None
-    if args.scrape or args.analyze or args.export_csv or args.refilter or args.rescrape_failed or args.full:
+    if args.scrape or args.analyze or args.export_csv or args.refilter or args.rescrape_failed or args.full or args.scrape_single_page:
         conn = create_connection(config)
         if conn is not None:
             verify_db_schema(conn)
@@ -1002,6 +1193,19 @@ Examples:
 
             if args.export_csv:
                 export_to_csv(config, conn)
+
+            if args.scrape_single_page:
+                print(f"\nScraping {len(args.scrape_single_page)} page(s)...")
+                success_count = 0
+                for i, url in enumerate(args.scrape_single_page, 1):
+                    print(f"\n--- Processing URL {i}/{len(args.scrape_single_page)} ---")
+                    if scrape_single_page(url, config, conn):
+                        success_count += 1
+                    else:
+                        print(f"Failed to process URL: {url}")
+                
+                print(f"\n--- Summary ---")
+                print(f"Successfully processed: {success_count}/{len(args.scrape_single_page)} URLs")
 
         end_time = tm.perf_counter()
         print(f"\nTotal execution time: {end_time - start_time:.2f} seconds")

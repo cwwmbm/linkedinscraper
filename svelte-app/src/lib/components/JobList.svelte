@@ -21,6 +21,65 @@
 		const parts = location.split(',');
 		return parts[parts.length - 1].trim();
 	}
+
+	function getRateFromMetadata(job) {
+		if (!job.metadata) return null;
+		try {
+			const metadata = JSON.parse(job.metadata);
+			const rate = metadata.Rate || metadata.rate;
+			// Only return rate if it's not "?" or similar non-informative values
+			if (rate && rate.trim() !== '?' && rate.trim() !== 'N/A' && rate.trim() !== '') {
+				return rate;
+			}
+		} catch (e) {
+			// Invalid JSON, ignore
+		}
+		return null;
+	}
+
+	// TODO: This is very specific info that we should not hardcode like this - will be addressed in the future
+	function getRemoteBelgiumFromMetadata(job) {
+		if (!job.metadata) return null;
+		try {
+			const metadata = JSON.parse(job.metadata);
+			const answer = metadata['Remote from Belgium?'];
+			// Return the answer if it exists
+			if (answer && answer.trim() !== '') {
+				return answer;
+			}
+		} catch (e) {
+			// Invalid JSON, ignore
+		}
+		return null;
+	}
+
+	async function toggleJobVisibility(job, event) {
+		// Stop propagation to prevent selecting the job when clicking hide button
+		event.stopPropagation();
+
+		const isHidden = job.hidden;
+		const endpoint = isHidden ? 'unhide_job' : 'hide_job';
+
+		try {
+			const response = await fetch(`/api/${endpoint}/${job.id}`, {
+				method: 'POST'
+			});
+
+			if (response.ok) {
+				job.hidden = isHidden ? 0 : 1;
+				// Trigger reactivity
+				jobs = jobs;
+				// Dispatch event to notify parent
+				dispatch('jobUpdated', {
+					id: job.id,
+					updatedFields: { hidden: job.hidden },
+					fullJob: job
+				});
+			}
+		} catch (error) {
+			console.error(`Error toggling job visibility: ${error.message}`);
+		}
+	}
 </script>
 
 <div class="job-list">
@@ -42,30 +101,66 @@
 				>
 					<div class="job-header">
 						<div class="job-title">{job.title || 'N/A'}</div>
-						<div class="job-status">
-							{#if job.applied}
-								<span class="status applied" title="Applied">A</span>
+						<div class="job-actions">
+							{#if job.job_url}
+								<a
+									href={job.job_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="job-link"
+									title="Open job posting"
+									on:click|stopPropagation
+								>
+									🔗
+								</a>
 							{/if}
-							{#if job.interview}
-								<span class="status interview" title="Interview">I</span>
-							{/if}
-							{#if job.rejected}
-								<span class="status rejected" title="Rejected">R</span>
-							{/if}
-							{#if job.metadata}
-								<span class="status analyzed" title="Analyzed">✓</span>
-							{/if}
-							{#if job.hidden}
-								<span class="status hidden" title="Hidden">H</span>
-							{/if}
+							<button
+								class="hide-btn"
+								class:hidden={job.hidden}
+								on:click={(e) => toggleJobVisibility(job, e)}
+								title={job.hidden ? "Unhide job" : "Hide job"}
+							>
+								{job.hidden ? '👁️' : '👁️‍🗨️'}
+							</button>
+							<div class="job-status">
+								{#if job.applied}
+									<span class="status applied" title="Applied">A</span>
+								{/if}
+								{#if job.interview}
+									<span class="status interview" title="Interview">I</span>
+								{/if}
+								{#if job.rejected}
+									<span class="status rejected" title="Rejected">R</span>
+								{/if}
+								{#if job.blocked}
+									<span class="status blocked" title="Blocked">B</span>
+								{/if}
+								{#if job.metadata}
+									<span class="status analyzed" title="Analyzed">✓</span>
+								{/if}
+								{#if job.hidden}
+									<span class="status hidden" title="Hidden">H</span>
+								{/if}
+							</div>
 						</div>
 					</div>
 					
-					<div class="job-company">{job.company || 'N/A'}</div>
+					<div class="job-company-row">
+						<span class="job-company">{job.company || 'N/A'}</span>
+						{#if getRateFromMetadata(job)}
+							<span class="job-rate">{getRateFromMetadata(job)}</span>
+						{/if}
+					</div>
 					<div class="job-meta">
 						<span class="job-country">{getCountry(job.location)}</span>
 						<span class="job-date">{formatDate(job.date)}</span>
 					</div>
+					{#if getRemoteBelgiumFromMetadata(job)}
+						<div class="job-remote-belgium">
+							<span class="remote-label">Remote BE:</span>
+							<span class="remote-answer">{getRemoteBelgiumFromMetadata(job)}</span>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -147,6 +242,63 @@
 		line-height: 1.3;
 		flex: 1;
 		margin-right: 0.5rem;
+		/* Clamp to 2 lines */
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.job-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex-shrink: 0;
+	}
+
+	.job-link {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		text-decoration: none;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+		font-size: 14px;
+	}
+
+	.job-link:hover {
+		background-color: rgba(10, 102, 194, 0.1);
+	}
+
+	.hide-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border: none;
+		background: none;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		font-size: 14px;
+		padding: 0;
+	}
+
+	.hide-btn:hover {
+		background-color: rgba(220, 53, 69, 0.1);
+		transform: scale(1.1);
+	}
+
+	.hide-btn.hidden {
+		background-color: rgba(40, 167, 69, 0.1);
+	}
+
+	.hide-btn.hidden:hover {
+		background-color: rgba(40, 167, 69, 0.2);
 	}
 
 	.job-status {
@@ -189,11 +341,28 @@
 		color: white;
 	}
 
+	.status.blocked {
+		background-color: #6f42c1;
+		color: white;
+	}
+
+	.job-company-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		font-size: 0.9rem;
+	}
+
 	.job-company {
 		font-weight: 500;
 		color: #333;
-		margin-bottom: 0.5rem;
-		font-size: 0.9rem;
+	}
+
+	.job-rate {
+		font-weight: 600;
+		color: #28a745;
+		font-size: 0.85rem;
 	}
 
 	.job-meta {
@@ -210,6 +379,26 @@
 
 	.job-date {
 		font-style: italic;
+	}
+
+	.job-remote-belgium {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.5rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid #e1e5e9;
+		font-size: 0.8rem;
+	}
+
+	.remote-label {
+		font-weight: 600;
+		color: #0a66c2;
+	}
+
+	.remote-answer {
+		color: #333;
+		font-weight: 500;
 	}
 
 	/* Scrollbar styling */
@@ -229,5 +418,66 @@
 
 	.jobs-container::-webkit-scrollbar-thumb:hover {
 		background: #a8a8a8;
+	}
+
+	/* Mobile: Horizontal scrolling */
+	@media (max-width: 768px) {
+		.job-list {
+			border-radius: 4px;
+		}
+
+		.jobs-container {
+			display: flex;
+			flex-direction: row;
+			gap: 0.75rem;
+			overflow-x: auto;
+			overflow-y: hidden;
+			padding: 0.75rem;
+			/* Smooth scrolling on mobile */
+			-webkit-overflow-scrolling: touch;
+			scroll-snap-type: x mandatory;
+			scroll-padding: 0.75rem;
+		}
+
+		.job-item {
+			flex: 0 0 280px;
+			width: 280px;
+			margin-bottom: 0;
+			scroll-snap-align: start;
+			/* Ensure cards are fully visible */
+			min-width: 280px;
+		}
+
+		.job-title {
+			font-size: 0.9rem;
+		}
+
+		.job-company-row {
+			font-size: 0.85rem;
+		}
+
+		.job-meta {
+			font-size: 0.75rem;
+		}
+
+		.job-remote-belgium {
+			font-size: 0.75rem;
+			margin-top: 0.4rem;
+			padding-top: 0.4rem;
+		}
+
+		/* Horizontal scrollbar styling */
+		.jobs-container::-webkit-scrollbar {
+			height: 6px;
+			width: auto;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.job-item {
+			flex: 0 0 260px;
+			width: 260px;
+			min-width: 260px;
+		}
 	}
 </style>

@@ -76,7 +76,12 @@ function markAsApplied(jobId) {
             console.log(data);  // Log the response
             if (data.success) {
                 var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
-                jobCard.classList.add('job-item-applied');
+                if (data.new_status === 1) {
+                    jobCard.classList.add('job-item-applied');
+                    jobCard.classList.remove('job-item-interview', 'job-item-rejected');
+                } else {
+                    jobCard.classList.remove('job-item-applied');
+                }
             }
         });
 }
@@ -102,7 +107,12 @@ function markAsRejected(jobId) {
             console.log(data);  // Log the response
             if (data.success) {
                 var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
-                jobCard.classList.add('job-item-rejected');
+                if (data.new_status === 1) {
+                    jobCard.classList.add('job-item-rejected');
+                    jobCard.classList.remove('job-item-applied', 'job-item-interview');
+                } else {
+                    jobCard.classList.remove('job-item-rejected');
+                }
             }
         });
 }
@@ -147,7 +157,12 @@ function markAsInterview(jobId) {
             console.log(data);  // Log the response
             if (data.success) {
                 var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
-                jobCard.classList.add('job-item-interview');
+                if (data.new_status === 1) {
+                    jobCard.classList.add('job-item-interview');
+                    jobCard.classList.remove('job-item-applied', 'job-item-rejected');
+                } else {
+                    jobCard.classList.remove('job-item-interview');
+                }
             }
         });
 }
