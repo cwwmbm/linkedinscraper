@@ -44,6 +44,10 @@ def call_openrouter_api(prompt, operation_type="job_analysis", model=None):
         "resume": {
             "api_key": "resume_api_key",
             "model": "resume_model"
+        },
+        "page_scraper": {
+            "api_key": "page_scraper_api_key",
+            "model": "page_scraper_model"
         }
     }
     
@@ -492,33 +496,33 @@ def update_notes(job_id):
 def get_job_stats():
     conn = sqlite3.connect(config["db_path"])
     cursor = conn.cursor()
-    
+
     # Get total jobs
     cursor.execute("SELECT COUNT(*) FROM jobs")
     total_jobs = cursor.fetchone()[0]
-    
+
     # Get not hidden jobs
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE hidden = 0")
     not_hidden = cursor.fetchone()[0]
-    
+
     # Get applied jobs
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE applied = 1")
     applied = cursor.fetchone()[0]
-    
+
     # Get interview jobs
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE interview = 1")
     interview = cursor.fetchone()[0]
-    
+
     # Get rejected jobs
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE rejected = 1")
     rejected = cursor.fetchone()[0]
-    
+
     # Get blocked jobs
     cursor.execute("SELECT COUNT(*) FROM jobs WHERE blocked = 1")
     blocked = cursor.fetchone()[0]
-    
+
     conn.close()
-    
+
     return jsonify({
         "total": total_jobs,
         "not_hidden": not_hidden,
@@ -527,6 +531,180 @@ def get_job_stats():
         "rejected": rejected,
         "blocked": blocked
     })
+
+@app.route('/api/add_manual_job', methods=['POST'])
+def add_manual_job():
+    """Add a job manually with optional AI field extraction"""
+    from flask import request
+    from datetime import datetime
+
+    try:
+        data = request.get_json()
+
+        if not data or 'job_description' not in data or not data['job_description'].strip():
+            return jsonify({"error": "job_description is required and cannot be empty"}), 400
+
+        # Get user-provided fields
+        user_title = data.get('title', '').strip()
+        user_company = data.get('company', '').strip()
+        user_location = data.get('location', '').strip()
+        job_description = data['job_description'].strip()
+
+        # Build AI prompt to extract missing fields
+        user_provided_info = []
+        if user_title:
+            user_provided_info.append(f"Title: {user_title}")
+        if user_company:
+            user_provided_info.append(f"Company: {user_company}")
+        if user_location:
+            user_provided_info.append(f"Location: {user_location}")
+
+        user_info_text = "\n".join(user_provided_info) if user_provided_info else "No fields provided by user"
+
+        prompt = f"""Please analyze this job posting text and extract the job information in JSON format.
+
+The JSON should contain:
+- title: Job title (string)
+- company: Company name (string)
+- location: Job location (string)
+- date: Job posting date in YYYY-MM-DD format (string, use today's date if not found)
+- job_description: Cleaned and structured job description (string)
+
+User provided information:
+{user_info_text}
+
+Job description text:
+{job_description}
+
+IMPORTANT: Return ONLY the raw JSON object with no markdown formatting, no code blocks, no backticks, no additional text or explanation. Start your response directly with {{ and end with }}.
+If the user provided a field above, use that value. Only extract fields that are missing."""
+
+        # Call AI to extract fields
+        try:
+            ai_response = call_openrouter_api(prompt, operation_type="page_scraper")
+            if not ai_response:
+                return jsonify({"error": "Failed to get response from AI service"}), 500
+        except Exception as e:
+            print(f"Error calling AI service: {e}")
+            return jsonify({"error": f"AI service error: {str(e)}"}), 500
+
+        # Parse AI response
+        try:
+            # Try to parse as-is
+            extracted_data = json.loads(ai_response)
+        except json.JSONDecodeError:
+            # Try to clean markdown formatting
+            try:
+                cleaned_response = ai_response.strip()
+                if cleaned_response.startswith('```json'):
+                    cleaned_response = cleaned_response[7:]
+                elif cleaned_response.startswith('```'):
+                    cleaned_response = cleaned_response[3:]
+                if cleaned_response.endswith('```'):
+                    cleaned_response = cleaned_response[:-3]
+                cleaned_response = cleaned_response.strip()
+                extracted_data = json.loads(cleaned_response)
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse AI response: {ai_response[:200]}")
+                return jsonify({"error": "AI returned invalid JSON format"}), 500
+
+        # Merge user-provided fields with AI-extracted fields (user data takes precedence)
+        final_title = user_title or extracted_data.get('title', 'Unknown Title')
+        final_company = user_company or extracted_data.get('company', 'Unknown Company')
+        final_location = user_location or extracted_data.get('location', 'Unknown Location')
+        final_date = extracted_data.get('date', datetime.now().strftime('%Y-%m-%d'))
+        final_description = extracted_data.get('job_description', job_description)
+
+        # Create job object
+        job_data = {
+            'title': final_title,
+            'company': final_company,
+            'location': final_location,
+            'date': final_date,
+            'job_url': data.get('job_url', ''),  # Optional URL field
+            'job_description': final_description,
+            'applied': 0,
+            'hidden': 0,
+            'interview': 0,
+            'rejected': 0,
+            'blocked': 0,
+            'date_loaded': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+        # Insert into database
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+
+        insert_query = """
+            INSERT INTO jobs (title, company, location, date, job_url, job_description,
+                            applied, hidden, interview, rejected, blocked, date_loaded)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        cursor.execute(insert_query, (
+            job_data['title'], job_data['company'], job_data['location'],
+            job_data['date'], job_data['job_url'], job_data['job_description'],
+            job_data['applied'], job_data['hidden'], job_data['interview'],
+            job_data['rejected'], job_data['blocked'], job_data['date_loaded']
+        ))
+        conn.commit()
+
+        # Get the inserted job ID
+        job_id = cursor.lastrowid
+        job_data['id'] = job_id
+
+        # Automatically analyze the job
+        analysis_results = None
+        try:
+            analysis_questions = config.get("analysis_questions", [])
+            if analysis_questions:
+                analysis_results = {}
+
+                for question_config in analysis_questions:
+                    if isinstance(question_config, str):
+                        question_text = question_config
+                        question_title = question_config
+                    else:
+                        question_text = question_config.get("question", "")
+                        question_title = question_config.get("title", question_text)
+
+                    if not question_text:
+                        continue
+
+                    analysis_prompt = f"""Based on the following job description, please answer this question in markdown: {question_text}
+
+Job Description:
+{final_description}
+
+Please provide a concise and relevant answer based only on the information provided in the job description."""
+
+                    try:
+                        answer = call_openrouter_api(analysis_prompt, operation_type="job_analysis")
+                        analysis_results[question_title] = answer or "Unable to analyze"
+                    except Exception as e:
+                        print(f"Error analyzing question '{question_title}': {e}")
+                        analysis_results[question_title] = "Error during analysis"
+
+                # Store analysis results
+                if analysis_results:
+                    metadata_json = json.dumps(analysis_results, indent=2)
+                    cursor.execute("UPDATE jobs SET metadata = ? WHERE id = ?", (metadata_json, job_id))
+                    conn.commit()
+                    job_data['metadata'] = metadata_json
+        except Exception as e:
+            print(f"Error during job analysis: {e}")
+            # Don't fail the request if analysis fails
+
+        conn.close()
+
+        return jsonify({
+            "message": "Job created successfully",
+            "job": job_data,
+            "analysis": analysis_results
+        }), 201
+
+    except Exception as e:
+        print(f"Error adding manual job: {e}")
+        return jsonify({"error": f"Error adding job: {str(e)}"}), 500
 
 def read_jobs_from_db():
     conn = sqlite3.connect(config["db_path"])
