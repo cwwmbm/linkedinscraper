@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import JobList from '$lib/components/JobList.svelte';
 	import JobDetail from '$lib/components/JobDetail.svelte';
+	import AddJobModal from '$lib/components/AddJobModal.svelte';
 
 	let jobs = [];
 	let filteredJobs = [];
@@ -14,6 +15,7 @@
 	let jobStats = { total: 0, not_hidden: 0, applied: 0, interview: 0, rejected: 0, blocked: 0 };
 	let dropdownOpen = false;
 	let controlsCollapsed = false; // For mobile collapsible header
+	let showAddJobModal = false;
 	
 	// Job category options
 	const categoryOptions = [
@@ -150,6 +152,25 @@
 		sortJobs();
 	}
 
+	function handleJobAdded(event) {
+		const newJob = event.detail;
+
+		// Add the new job to the jobs array
+		jobs = [newJob, ...jobs];
+
+		// Re-filter and sort
+		filterJobsByCategories();
+
+		// Select the new job
+		selectedJob = newJob;
+
+		// Refresh stats
+		fetchJobStats();
+
+		// Close modal
+		showAddJobModal = false;
+	}
+
 	// Reactive statements to update filtered jobs when search term changes
 	$: if (searchTerm !== undefined) {
 		filterJobsByCategories();
@@ -205,6 +226,9 @@
 					</div>
 					<button on:click={toggleSort} class="sort-btn">
 						Sort by Date {sortOrder === 'desc' ? '↓' : '↑'}
+					</button>
+					<button on:click={() => showAddJobModal = true} class="add-job-btn">
+						➕ Add Job
 					</button>
 
 					<!-- Category Filter Multi-Select Dropdown -->
@@ -271,6 +295,9 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- Add Job Modal -->
+	<AddJobModal show={showAddJobModal} on:close={() => showAddJobModal = false} on:jobAdded={handleJobAdded} />
 </main>
 
 <style>
@@ -353,6 +380,22 @@
 
 	.sort-btn:hover {
 		background-color: #004182;
+	}
+
+	.add-job-btn {
+		background-color: #28a745;
+		color: white;
+		border: none;
+		padding: 0.75rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		white-space: nowrap;
+		transition: background-color 0.2s;
+	}
+
+	.add-job-btn:hover {
+		background-color: #218838;
 	}
 
 	.category-filter {
@@ -627,7 +670,8 @@
 			max-width: none;
 		}
 
-		.sort-btn {
+		.sort-btn,
+		.add-job-btn {
 			width: 100%;
 			padding: 0.6rem;
 		}
