@@ -58,15 +58,19 @@
 		event.stopPropagation();
 
 		const isHidden = job.hidden;
-		const endpoint = isHidden ? 'unhide_job' : 'hide_job';
+		const newHiddenValue = isHidden ? 0 : 1;
 
 		try {
-			const response = await fetch(`/api/${endpoint}/${job.id}`, {
-				method: 'POST'
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ hidden: newHiddenValue })
 			});
 
 			if (response.ok) {
-				job.hidden = isHidden ? 0 : 1;
+				job.hidden = newHiddenValue;
 				// Trigger reactivity
 				jobs = jobs;
 				// Dispatch event to notify parent

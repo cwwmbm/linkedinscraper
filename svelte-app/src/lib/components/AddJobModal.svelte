@@ -39,7 +39,7 @@
 		errorMessage = '';
 
 		try {
-			const response = await fetch('/api/add_manual_job', {
+			const response = await fetch('/jobs', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -54,13 +54,13 @@
 
 			if (!response.ok) {
 				const errorData = await response.json();
-				throw new Error(errorData.error || `Error: ${response.status}`);
+				throw new Error(errorData.message || errorData.error || `Error: ${response.status}`);
 			}
 
 			const result = await response.json();
 
-			// Dispatch success event with the created job
-			dispatch('jobAdded', result.job);
+			// NestJS returns the job object directly
+			dispatch('jobAdded', result);
 
 			// Close modal
 			closeModal();

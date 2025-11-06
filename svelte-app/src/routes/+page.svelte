@@ -27,16 +27,18 @@
 		{ id: 'blocked', label: 'Blocked', color: '#6f42c1' }
 	];
 
-	// Fetch jobs from Flask backend
+	// Fetch jobs from NestJS backend
 	async function fetchJobs() {
 		try {
 			loading = true;
 			// Always fetch all jobs including hidden for filtering
-			const response = await fetch('/api/get_all_jobs_including_hidden');
+			const response = await fetch('/jobs?hidden=true');
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
-			jobs = await response.json();
+			const result = await response.json();
+			// NestJS returns { data: Job[], total, limit, offset }
+			jobs = result.data || result;
 			filterJobsByCategories();
 		} catch (err) {
 			error = err.message;
@@ -49,7 +51,7 @@
 	// Fetch job statistics
 	async function fetchJobStats() {
 		try {
-			const response = await fetch('/api/get_job_stats');
+			const response = await fetch('/jobs/stats');
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
