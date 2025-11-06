@@ -27,7 +27,7 @@ export class ManualJobCreatorService {
 
     try {
       // Build AI prompt to extract missing fields
-      const userProvidedInfo = [];
+      const userProvidedInfo: string[] = [];
       if (dto.title) userProvidedInfo.push(`Title: ${dto.title}`);
       if (dto.company) userProvidedInfo.push(`Company: ${dto.company}`);
       if (dto.location) userProvidedInfo.push(`Location: ${dto.location}`);
