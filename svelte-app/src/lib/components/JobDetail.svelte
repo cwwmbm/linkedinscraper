@@ -38,7 +38,7 @@
 	// Fetch config to know question types
 	async function fetchConfig() {
 		try {
-			const response = await fetch('/api/config');
+			const response = await fetch('/config');
 			if (response.ok) {
 				config = await response.json();
 			}
@@ -59,16 +59,16 @@
 
 	async function loadNotes() {
 		if (!job || !job.id) return;
-		
+
 		try {
 			// First try to get notes from the job object if it exists
 			if (job.notes !== undefined) {
 				notes = job.notes || '';
 				return;
 			}
-			
-			// Otherwise fetch from API
-			const response = await fetch(`/api/get_notes/${job.id}`);
+
+			// Otherwise fetch from API - NestJS returns the full job object
+			const response = await fetch(`/jobs/${job.id}`);
 			if (response.ok) {
 				const result = await response.json();
 				notes = result.notes || '';
@@ -82,30 +82,30 @@
 
 	async function saveNotes() {
 		if (!job || !job.id) return;
-		
+
 		isSavingNotes = true;
 		notesSaved = false;
-		
+
 		try {
-			const response = await fetch(`/api/update_notes/${job.id}`, {
-				method: 'PUT',
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({ notes })
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
 				job.notes = notes;
-				
+
 				// Update the parent component
 				dispatch('jobUpdated', {
 					id: job.id,
 					updatedFields: { notes: job.notes },
 					fullJob: job
 				});
-				
+
 				notesSaved = true;
 				setTimeout(() => {
 					notesSaved = false;
@@ -141,24 +141,24 @@
 
 	async function analyzeJob() {
 		if (isAnalyzing) return;
-		
+
 		isAnalyzing = true;
 		analysisError = null;
-		
+
 		try {
-			const response = await fetch(`/api/analyze_job/${job.id}`, {
+			const response = await fetch(`/jobs/${job.id}/analysis`, {
 				method: 'POST'
 			});
-			
+
 			if (!response.ok) {
 				throw new Error(`Failed to analyze job: ${response.status}`);
 			}
-			
+
 			const result = await response.json();
-			
+
 			// Update the job object with the analysis results
 			job.metadata = JSON.stringify(result.analysis);
-			
+
 			// Update the parent component with the analyzed job
 			dispatch('jobUpdated', {
 				id: job.id,
@@ -177,21 +177,21 @@
 
 	async function generateResume() {
 		if (isGeneratingResume) return;
-		
+
 		isGeneratingResume = true;
-		
+
 		try {
-			const response = await fetch(`/api/get_resume/${job.id}`, {
+			const response = await fetch(`/jobs/${job.id}/resume`, {
 				method: 'POST'
 			});
-			
+
 			if (!response.ok) {
 				throw new Error(`Failed to generate resume: ${response.status}`);
 			}
-			
+
 			const result = await response.json();
 			job.resume = result.resume;
-			
+
 			dispatch('jobUpdated', {
 				id: job.id,
 				updatedFields: { resume: job.resume },
@@ -207,21 +207,21 @@
 
 	async function generateCoverLetter() {
 		if (isGeneratingCoverLetter) return;
-		
+
 		isGeneratingCoverLetter = true;
-		
+
 		try {
-			const response = await fetch(`/api/get_CoverLetter/${job.id}`, {
+			const response = await fetch(`/jobs/${job.id}/cover-letter`, {
 				method: 'POST'
 			});
-			
+
 			if (!response.ok) {
 				throw new Error(`Failed to generate cover letter: ${response.status}`);
 			}
-			
+
 			const result = await response.json();
 			job.cover_letter = result.cover_letter;
-			
+
 			dispatch('jobUpdated', {
 				id: job.id,
 				updatedFields: { cover_letter: job.cover_letter },
@@ -237,22 +237,35 @@
 
 	async function markAsApplied() {
 		try {
-			const response = await fetch(`/api/mark_applied/${job.id}`, {
-				method: 'POST'
+			// Toggle behavior: if already applied, set to 0, otherwise set to 1
+			const newStatus = job.applied === 1 ? 0 : 1;
+			const updateData = { applied: newStatus };
+
+			// Clear other statuses when setting to applied
+			if (newStatus === 1) {
+				updateData.interview = 0;
+				updateData.rejected = 0;
+				updateData.blocked = 0;
+			}
+
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(updateData)
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
-				job.applied = result.new_status;
-				// Clear other statuses when this one is set
-				if (result.new_status === 1) {
-					job.interview = 0;
-					job.rejected = 0;
-					job.blocked = 0;
-				}
+				job.applied = result.applied;
+				job.interview = result.interview;
+				job.rejected = result.rejected;
+				job.blocked = result.blocked;
+
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { 
+					updatedFields: {
 						applied: job.applied,
 						interview: job.interview,
 						rejected: job.rejected,
@@ -268,22 +281,35 @@
 
 	async function markAsInterview() {
 		try {
-			const response = await fetch(`/api/mark_interview/${job.id}`, {
-				method: 'POST'
+			// Toggle behavior: if already interview, set to 0, otherwise set to 1
+			const newStatus = job.interview === 1 ? 0 : 1;
+			const updateData = { interview: newStatus };
+
+			// Clear other statuses when setting to interview
+			if (newStatus === 1) {
+				updateData.applied = 0;
+				updateData.rejected = 0;
+				updateData.blocked = 0;
+			}
+
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(updateData)
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
-				job.interview = result.new_status;
-				// Clear other statuses when this one is set
-				if (result.new_status === 1) {
-					job.applied = 0;
-					job.rejected = 0;
-					job.blocked = 0;
-				}
+				job.applied = result.applied;
+				job.interview = result.interview;
+				job.rejected = result.rejected;
+				job.blocked = result.blocked;
+
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { 
+					updatedFields: {
 						applied: job.applied,
 						interview: job.interview,
 						rejected: job.rejected,
@@ -299,22 +325,35 @@
 
 	async function markAsRejected() {
 		try {
-			const response = await fetch(`/api/mark_rejected/${job.id}`, {
-				method: 'POST'
+			// Toggle behavior: if already rejected, set to 0, otherwise set to 1
+			const newStatus = job.rejected === 1 ? 0 : 1;
+			const updateData = { rejected: newStatus };
+
+			// Clear other statuses when setting to rejected
+			if (newStatus === 1) {
+				updateData.applied = 0;
+				updateData.interview = 0;
+				updateData.blocked = 0;
+			}
+
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(updateData)
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
-				job.rejected = result.new_status;
-				// Clear other statuses when this one is set
-				if (result.new_status === 1) {
-					job.applied = 0;
-					job.interview = 0;
-					job.blocked = 0;
-				}
+				job.applied = result.applied;
+				job.interview = result.interview;
+				job.rejected = result.rejected;
+				job.blocked = result.blocked;
+
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { 
+					updatedFields: {
 						applied: job.applied,
 						interview: job.interview,
 						rejected: job.rejected,
@@ -330,22 +369,35 @@
 
 	async function markAsBlocked() {
 		try {
-			const response = await fetch(`/api/mark_blocked/${job.id}`, {
-				method: 'POST'
+			// Toggle behavior: if already blocked, set to 0, otherwise set to 1
+			const newStatus = job.blocked === 1 ? 0 : 1;
+			const updateData = { blocked: newStatus };
+
+			// Clear other statuses when setting to blocked
+			if (newStatus === 1) {
+				updateData.applied = 0;
+				updateData.interview = 0;
+				updateData.rejected = 0;
+			}
+
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(updateData)
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
-				job.blocked = result.new_status;
-				// Clear other statuses when this one is set
-				if (result.new_status === 1) {
-					job.applied = 0;
-					job.interview = 0;
-					job.rejected = 0;
-				}
+				job.applied = result.applied;
+				job.interview = result.interview;
+				job.rejected = result.rejected;
+				job.blocked = result.blocked;
+
 				dispatch('jobUpdated', {
 					id: job.id,
-					updatedFields: { 
+					updatedFields: {
 						applied: job.applied,
 						interview: job.interview,
 						rejected: job.rejected,
@@ -361,16 +413,20 @@
 
 	async function toggleJobVisibility() {
 		const isHidden = job.hidden;
+		const newHiddenValue = isHidden ? 0 : 1;
 		const action = isHidden ? 'unhide' : 'hide';
-		const endpoint = isHidden ? 'unhide_job' : 'hide_job';
-		
+
 		try {
-			const response = await fetch(`/api/${endpoint}/${job.id}`, {
-				method: 'POST'
+			const response = await fetch(`/jobs/${job.id}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ hidden: newHiddenValue })
 			});
-			
+
 			if (response.ok) {
-				job.hidden = isHidden ? 0 : 1;
+				job.hidden = newHiddenValue;
 				dispatch('jobUpdated', {
 					id: job.id,
 					updatedFields: { hidden: job.hidden },
