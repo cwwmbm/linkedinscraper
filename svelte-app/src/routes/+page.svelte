@@ -5,7 +5,6 @@
 	import AddJobModal from '$lib/components/AddJobModal.svelte';
 
 	let jobs = [];
-	let filteredJobs = [];
 	let selectedJob = null;
 	let loading = true;
 	let error = null;
@@ -16,7 +15,9 @@
 	let dropdownOpen = false;
 	let controlsCollapsed = false; // For mobile collapsible header
 	let showAddJobModal = false;
-	
+	let totalJobs = 0; // Total jobs from API response
+	let debounceTimer;
+
 	// Job category options
 	const categoryOptions = [
 		{ id: 'hidden', label: 'Hidden', color: '#6c757d' },
@@ -27,17 +28,77 @@
 		{ id: 'blocked', label: 'Blocked', color: '#6f42c1' }
 	];
 
-	// Fetch jobs from Flask backend
+	// Build query parameters based on current filter state
+	function buildQueryParams() {
+		const params = new URLSearchParams();
+
+		// Handle category filters
+		// Map categories to API parameters
+		const categoryMapping = {
+			'hidden': { hidden: true },
+			'new': { hidden: false, applied: false, interview: false, rejected: false, blocked: false },
+			'applied': { applied: true },
+			'interview': { interview: true },
+			'rejected': { rejected: true },
+			'blocked': { blocked: true }
+		};
+
+		// If hidden is selected, we need to include hidden jobs
+		if (selectedCategories.includes('hidden')) {
+			params.append('hidden', 'true');
+		} else {
+			params.append('hidden', 'false');
+		}
+
+		// For status filters, we need to handle them differently
+		// The backend supports filtering by specific status, but we have multiple categories selected
+		// We'll need to make separate requests or update backend to support OR logic
+		// For now, let's fetch with the appropriate filters
+
+		// If only one non-hidden category is selected, we can use the specific filter
+		const nonHiddenCategories = selectedCategories.filter(cat => cat !== 'hidden');
+
+		if (nonHiddenCategories.length === 1 && nonHiddenCategories[0] !== 'new') {
+			const category = nonHiddenCategories[0];
+			params.append(category, 'true');
+		}
+		// If 'new' is the only category selected, we need jobs with no status flags
+		// This requires fetching all and will be filtered on backend if we add support for it
+		// For now, we fetch all when multiple categories are selected
+
+		// Add search term
+		if (searchTerm && searchTerm.trim()) {
+			params.append('search', searchTerm.trim());
+		}
+
+		// Add sorting
+		params.append('sort', 'date');
+		params.append('order', sortOrder.toUpperCase());
+
+		// Pagination - fetch more results
+		params.append('limit', '1000');
+		params.append('offset', '0');
+
+		return params.toString();
+	}
+
+	// Fetch jobs from NestJS backend with current filters
 	async function fetchJobs() {
 		try {
 			loading = true;
-			// Always fetch all jobs including hidden for filtering
-			const response = await fetch('/api/get_all_jobs_including_hidden');
+			const queryString = buildQueryParams();
+			const response = await fetch(`/jobs?${queryString}`);
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
-			jobs = await response.json();
-			filterJobsByCategories();
+			const result = await response.json();
+			// NestJS returns { data: Job[], total, limit, offset }
+			jobs = result.data || result;
+			totalJobs = result.total || jobs.length;
+
+			// Apply client-side category filtering for 'new' and multiple category selections
+			// since the backend doesn't support OR logic for status filters yet
+			jobs = filterJobsByCategories(jobs);
 		} catch (err) {
 			error = err.message;
 			console.error('Error fetching jobs:', err);
@@ -46,10 +107,28 @@
 		}
 	}
 
+	// Client-side category filtering (for 'new' jobs and multi-category selections)
+	function filterJobsByCategories(jobList) {
+		return jobList.filter(job => {
+			const category = getJobCategory(job);
+			return selectedCategories.includes(category);
+		});
+	}
+
+	// Get job category based on its status
+	function getJobCategory(job) {
+		if (job.hidden === 1) return 'hidden';
+		if (job.applied === 1) return 'applied';
+		if (job.interview === 1) return 'interview';
+		if (job.rejected === 1) return 'rejected';
+		if (job.blocked === 1) return 'blocked';
+		return 'new'; // Default for jobs with no status
+	}
+
 	// Fetch job statistics
 	async function fetchJobStats() {
 		try {
-			const response = await fetch('/api/get_job_stats');
+			const response = await fetch('/jobs/stats');
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
@@ -65,69 +144,25 @@
 
 	function handleJobUpdate(event) {
 		const { id, updatedFields, fullJob } = event.detail;
-		
+
 		// Update the job in the jobs array
 		const jobIndex = jobs.findIndex(job => job.id === id);
 		if (jobIndex !== -1) {
 			// Update the specific job with new data
 			jobs[jobIndex] = { ...jobs[jobIndex], ...updatedFields };
-			
+
 			// Update selectedJob if it's the same job
 			if (selectedJob && selectedJob.id === id) {
 				selectedJob = { ...selectedJob, ...updatedFields };
 			}
-			
+
 			// Trigger reactivity by reassigning the array
 			jobs = [...jobs];
-			
-			// Re-filter and sort jobs
-			filterJobsByCategories();
 		}
-		
-		// Refetch stats since job status may have changed
+
+		// Refetch jobs and stats since job status may have changed
+		fetchJobs();
 		fetchJobStats();
-	}
-
-	function sortJobs() {
-		filteredJobs = filteredJobs.sort((a, b) => {
-			const dateA = new Date(a.date || 0);
-			const dateB = new Date(b.date || 0);
-			return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-		});
-	}
-
-	// Get job category based on its status
-	function getJobCategory(job) {
-		if (job.hidden === 1) return 'hidden';
-		if (job.applied === 1) return 'applied';
-		if (job.interview === 1) return 'interview';
-		if (job.rejected === 1) return 'rejected';
-		if (job.blocked === 1) return 'blocked';
-		return 'new'; // Default for jobs with no status
-	}
-
-	// Filter jobs by selected categories
-	function filterJobsByCategories() {
-		let categoryFilteredJobs = jobs.filter(job => {
-			const category = getJobCategory(job);
-			return selectedCategories.includes(category);
-		});
-		
-		// Apply search filter on top of category filter
-		if (!searchTerm.trim()) {
-			filteredJobs = categoryFilteredJobs;
-		} else {
-			const term = searchTerm.toLowerCase();
-			filteredJobs = categoryFilteredJobs.filter(job => {
-				return (
-					(job.title || '').toLowerCase().includes(term) ||
-					(job.company || '').toLowerCase().includes(term) ||
-					(job.location || '').toLowerCase().includes(term) ||
-					(job.job_description || '').toLowerCase().includes(term)
-				);
-			});
-		}
-		sortJobs();
 	}
 
 	// Toggle category selection
@@ -137,7 +172,8 @@
 		} else {
 			selectedCategories = [...selectedCategories, categoryId];
 		}
-		filterJobsByCategories();
+		// Trigger API call when categories change
+		fetchJobs();
 	}
 
 	// Close dropdown when clicking outside
@@ -149,47 +185,57 @@
 
 	function toggleSort() {
 		sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
-		sortJobs();
+		fetchJobs();
 	}
 
 	function handleJobAdded(event) {
 		const newJob = event.detail;
 
-		// Add the new job to the jobs array
-		jobs = [newJob, ...jobs];
-
-		// Re-filter and sort
-		filterJobsByCategories();
-
 		// Select the new job
 		selectedJob = newJob;
 
-		// Refresh stats
+		// Refresh jobs list and stats
+		fetchJobs();
 		fetchJobStats();
 
 		// Close modal
 		showAddJobModal = false;
 	}
 
-	// Reactive statements to update filtered jobs when search term changes
-	$: if (searchTerm !== undefined) {
-		filterJobsByCategories();
+	// Refresh button handler
+	function refreshJobs() {
+		fetchJobs();
+		fetchJobStats();
 	}
 
-	// Reactive statement to re-filter when categories change
-	$: if (selectedCategories !== undefined) {
-		filterJobsByCategories();
+	// Debounced search - call API after user stops typing
+	function handleSearchInput() {
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			fetchJobs();
+		}, 500); // 500ms debounce
+	}
+
+	// Reactive statement for search term with debounce
+	$: if (searchTerm !== undefined) {
+		handleSearchInput();
+	}
+
+	// Reactive statement to re-fetch when sort order changes
+	$: if (sortOrder !== undefined) {
+		// This will be triggered by toggleSort() which already calls fetchJobs()
 	}
 
 	onMount(() => {
 		fetchJobs();
 		fetchJobStats();
-		
+
 		// Add click outside listener
 		document.addEventListener('click', handleClickOutside);
-		
+
 		return () => {
 			document.removeEventListener('click', handleClickOutside);
+			clearTimeout(debounceTimer);
 		};
 	});
 </script>
@@ -210,7 +256,7 @@
 		<div class="controls" class:collapsed={controlsCollapsed}>
 			<button class="collapse-toggle" on:click={() => controlsCollapsed = !controlsCollapsed}>
 				{controlsCollapsed ? '▼' : '▲'} Filters
-				<span class="job-count-inline">({filteredJobs.length}/{jobStats.total >= 100 ? '100+' : jobStats.total})</span>
+				<span class="job-count-inline">({jobs.length}/{jobStats.total >= 100 ? '100+' : jobStats.total})</span>
 			</button>
 
 			{#if !controlsCollapsed}
@@ -226,6 +272,9 @@
 					</div>
 					<button on:click={toggleSort} class="sort-btn">
 						Sort by Date {sortOrder === 'desc' ? '↓' : '↑'}
+					</button>
+					<button on:click={refreshJobs} class="refresh-btn">
+						🔄 Refresh
 					</button>
 					<button on:click={() => showAddJobModal = true} class="add-job-btn">
 						➕ Add Job
@@ -272,7 +321,7 @@
 					</div>
 
 					<div class="job-count">
-						Showing {filteredJobs.length} of {jobStats.total >= 100 ? '100+' : jobStats.total} jobs
+						Showing {jobs.length} of {jobStats.total >= 100 ? '100+' : jobStats.total} jobs
 					</div>
 				</div>
 			{/if}
@@ -281,7 +330,7 @@
 		<!-- Two-Panel Layout -->
 		<div class="main-content">
 			<div class="left-panel">
-				<JobList jobs={filteredJobs} {selectedJob} on:selectJob={(e) => selectJob(e.detail)} on:jobUpdated={handleJobUpdate} />
+				<JobList jobs={jobs} {selectedJob} on:selectJob={(e) => selectJob(e.detail)} on:jobUpdated={handleJobUpdate} />
 			</div>
 			<div class="right-panel">
 				{#if selectedJob}
@@ -380,6 +429,22 @@
 
 	.sort-btn:hover {
 		background-color: #004182;
+	}
+
+	.refresh-btn {
+		background-color: #6c757d;
+		color: white;
+		border: none;
+		padding: 0.75rem 1rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		white-space: nowrap;
+		transition: background-color 0.2s;
+	}
+
+	.refresh-btn:hover {
+		background-color: #5a6268;
 	}
 
 	.add-job-btn {
@@ -671,6 +736,7 @@
 		}
 
 		.sort-btn,
+		.refresh-btn,
 		.add-job-btn {
 			width: 100%;
 			padding: 0.6rem;
