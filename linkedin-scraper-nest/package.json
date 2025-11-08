@@ -82,6 +82,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(franc|trigram-utils|collapse-white-space|n-gram)/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
