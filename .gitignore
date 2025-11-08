@@ -13,3 +13,5 @@ indeed.py
 *.sh
 *.log
 SupabaseUpload/
+node_modules/
+.env
