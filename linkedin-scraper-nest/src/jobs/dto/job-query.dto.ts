@@ -1,4 +1,4 @@
-import { IsOptional, IsBoolean, IsInt, IsIn, Min, Max } from 'class-validator';
+import { IsOptional, IsBoolean, IsInt, IsIn, IsString, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -33,6 +33,11 @@ export class JobQueryDto {
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
   blocked?: boolean;
+
+  @ApiPropertyOptional({ description: 'Search term for title, company, location, and description', type: String })
+  @IsOptional()
+  @IsString()
+  search?: string;
 
   // Pagination
   @ApiPropertyOptional({ description: 'Number of results (default: 100, max: 1000)', type: Number })

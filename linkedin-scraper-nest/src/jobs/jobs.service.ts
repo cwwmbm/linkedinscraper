@@ -41,6 +41,15 @@ export class JobsService {
       queryBuilder.andWhere('job.blocked = :blocked', { blocked: query.blocked ? 1 : 0 });
     }
 
+    // Filter by search term (title, company, location, description)
+    if (query.search && query.search.trim()) {
+      const searchTerm = `%${query.search.toLowerCase().trim()}%`;
+      queryBuilder.andWhere(
+        '(LOWER(job.title) LIKE :search OR LOWER(job.company) LIKE :search OR LOWER(job.location) LIKE :search OR LOWER(job.job_description) LIKE :search)',
+        { search: searchTerm }
+      );
+    }
+
     // Get total count before pagination
     const total = await queryBuilder.getCount();
 
