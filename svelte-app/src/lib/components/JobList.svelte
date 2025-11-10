@@ -61,7 +61,7 @@
 		const newHiddenValue = isHidden ? 0 : 1;
 
 		try {
-			const response = await fetch(`/jobs/${job.id}`, {
+			const response = await fetch(`/api/jobs/${job.id}`, {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json'
