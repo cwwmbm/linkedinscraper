@@ -3,7 +3,8 @@
 
 	export let jobs = [];
 	export let selectedJob = null;
-	
+	export let loading = false;
+
 	const dispatch = createEventDispatcher();
 
 	function selectJob(job) {
@@ -87,7 +88,12 @@
 </script>
 
 <div class="job-list">
-	{#if jobs.length === 0}
+	{#if loading}
+		<div class="loading-container">
+			<div class="spinner"></div>
+			<p>Loading jobs...</p>
+		</div>
+	{:else if jobs.length === 0}
 		<div class="no-jobs">
 			<p>No jobs found</p>
 		</div>
@@ -179,6 +185,30 @@
 		background-color: white;
 		border-radius: 8px;
 		border: 1px solid #e1e5e9;
+	}
+
+	.loading-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 3rem 1rem;
+		color: #666;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #f3f3f3;
+		border-top: 4px solid #0a66c2;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin-bottom: 1rem;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 
 	.no-jobs {
