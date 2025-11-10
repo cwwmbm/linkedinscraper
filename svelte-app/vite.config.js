@@ -7,11 +7,9 @@ export default defineConfig({
 		host: '0.0.0.0', // Allow external connections
 		proxy: {
 			'/api': {
-				target: 'http://localhost:5001',
+				target: 'http://localhost:3000',
 				changeOrigin: true,
-				secure: false,
-				// Don't rewrite the path - keep /api prefix since we now have /api routes in Flask
-				rewrite: (path) => path
+				secure: false
 			}
 		}
 	}

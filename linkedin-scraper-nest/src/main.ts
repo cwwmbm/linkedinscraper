@@ -12,6 +12,9 @@ async function bootstrap() {
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
+  // Set global prefix for all routes
+  app.setGlobalPrefix('api');
+
   // Enable CORS
   app.enableCors();
 

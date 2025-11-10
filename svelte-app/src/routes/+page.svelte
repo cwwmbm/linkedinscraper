@@ -87,7 +87,7 @@
 		try {
 			loading = true;
 			const queryString = buildQueryParams();
-			const response = await fetch(`/jobs?${queryString}`);
+			const response = await fetch(`/api/jobs?${queryString}`);
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}
@@ -128,7 +128,7 @@
 	// Fetch job statistics
 	async function fetchJobStats() {
 		try {
-			const response = await fetch('/jobs/stats');
+			const response = await fetch('/api/jobs/stats');
 			if (!response.ok) {
 				throw new Error(`HTTP error! status: ${response.status}`);
 			}

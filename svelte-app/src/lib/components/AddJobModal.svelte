@@ -39,7 +39,7 @@
 		errorMessage = '';
 
 		try {
-			const response = await fetch('/jobs', {
+			const response = await fetch('/api/jobs/manual', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

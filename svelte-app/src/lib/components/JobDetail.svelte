@@ -38,7 +38,7 @@
 	// Fetch config to know question types
 	async function fetchConfig() {
 		try {
-			const response = await fetch('/config');
+			const response = await fetch('/api/config');
 			if (response.ok) {
 				config = await response.json();
 			}
@@ -68,7 +68,7 @@
 			}
 
 			// Otherwise fetch from API - NestJS returns the full job object
-			const response = await fetch(`/jobs/${job.id}`);
+			const response = await fetch(`/api/jobs/${job.id}`);
 			if (response.ok) {
 				const result = await response.json();
 				notes = result.notes || '';
@@ -87,7 +87,7 @@
 		notesSaved = false;
 
 		try {
-			const response = await fetch(`/jobs/${job.id}`, {
+			const response = await fetch(`/api/jobs/${job.id}`, {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json'
@@ -146,7 +146,7 @@
 		analysisError = null;
 
 		try {
-			const response = await fetch(`/jobs/${job.id}/analysis`, {
+			const response = await fetch(`/api/jobs/${job.id}/analysis`, {
 				method: 'POST'
 			});
 
@@ -181,7 +181,7 @@
 		isGeneratingResume = true;
 
 		try {
-			const response = await fetch(`/jobs/${job.id}/resume`, {
+			const response = await fetch(`/api/jobs/${job.id}/resume`, {
 				method: 'POST'
 			});
 
@@ -211,7 +211,7 @@
 		isGeneratingCoverLetter = true;
 
 		try {
-			const response = await fetch(`/jobs/${job.id}/cover-letter`, {
+			const response = await fetch(`/api/jobs/${job.id}/cover-letter`, {
 				method: 'POST'
 			});
 
