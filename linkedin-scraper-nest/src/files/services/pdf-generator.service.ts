@@ -172,39 +172,44 @@ export class PdfGeneratorService {
 
     .content {
       font-size: 11pt;
-      line-height: 1.8;
+      line-height: 1.7;
+      color: #333;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
 
-    .content h1, .content h2 {
+    .content h1, .content h2, .content h3 {
       color: #2c3e50;
-      margin-top: 20px;
+      margin-top: 18px;
       margin-bottom: 10px;
-      border-bottom: 2px solid #ecf0f1;
-      padding-bottom: 5px;
+      font-weight: 600;
     }
 
     .content h1 {
       font-size: 20px;
+      border-bottom: 2px solid #ecf0f1;
+      padding-bottom: 5px;
     }
 
     .content h2 {
       font-size: 18px;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 3px;
     }
 
     .content h3 {
-      color: #34495e;
       font-size: 16px;
-      margin-top: 15px;
-      margin-bottom: 8px;
     }
 
     .content p {
       margin-bottom: 12px;
+      line-height: 1.6;
     }
 
-    .content ul, .content ol {
+    .content ul {
       margin-left: 25px;
       margin-bottom: 12px;
+      list-style-type: disc;
     }
 
     .content li {
@@ -213,6 +218,7 @@ export class PdfGeneratorService {
 
     .content strong {
       color: #2c3e50;
+      font-weight: 600;
     }
 
     .footer {
@@ -387,53 +393,44 @@ export class PdfGeneratorService {
    * Convert basic markdown to HTML
    */
   private markdownToHtml(text: string): string {
-    if (!text) return '';
+    if (!text) return '<p>No content available</p>';
 
     let html = text;
 
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    // Headers (must come before other replacements)
+    html = html.replace(/^### (.*)$/gim, '<h3>$1</h3>');
+    html = html.replace(/^## (.*)$/gim, '<h2>$1</h2>');
+    html = html.replace(/^# (.*)$/gim, '<h1>$1</h1>');
 
     // Bold
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
 
     // Italic
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-    // Unordered lists
-    html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
-    html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+    // Unordered lists (bullet points)
+    html = html.replace(/^\* (.*)$/gim, '<li>$1</li>');
+    html = html.replace(/^- (.*)$/gim, '<li>$1</li>');
 
-    // Wrap consecutive <li> in <ul>
-    html = html.replace(/(<li>.*<\/li>\n?)+/gs, (match) => {
-      return '<ul>' + match + '</ul>';
-    });
+    // Wrap consecutive list items in <ul>
+    html = html.replace(/(<li>.*?<\/li>\s*)+/gs, (match) => '<ul>' + match + '</ul>');
 
-    // Ordered lists
-    html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+    // Convert double line breaks to paragraph breaks
+    html = html.replace(/\n\n+/g, '</p><p>');
 
-    // Paragraphs (double newline = new paragraph)
-    html = html.replace(/\n\n/g, '</p><p>');
-    html = '<p>' + html + '</p>';
+    // Convert single line breaks to <br>
+    html = html.replace(/\n/g, '<br>');
+
+    // Wrap everything in paragraphs if not already wrapped
+    if (!html.includes('<h1>') && !html.includes('<h2>') && !html.includes('<h3>')) {
+      html = '<p>' + html + '</p>';
+    }
 
     // Clean up empty paragraphs
     html = html.replace(/<p><\/p>/g, '');
     html = html.replace(/<p>\s*<\/p>/g, '');
-
-    // Clean up paragraphs around other block elements
-    html = html.replace(/<p>(<h[1-6]>)/g, '$1');
-    html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1');
-    html = html.replace(/<p>(<ul>)/g, '$1');
-    html = html.replace(/(<\/ul>)<\/p>/g, '$1');
-    html = html.replace(/<p>(<ol>)/g, '$1');
-    html = html.replace(/(<\/ol>)<\/p>/g, '$1');
-
-    // Single newlines to <br>
-    html = html.replace(/\n/g, '<br>');
 
     return html;
   }
