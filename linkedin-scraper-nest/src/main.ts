@@ -33,14 +33,31 @@ async function bootstrap() {
     .addTag('scraper')
     .addTag('ai')
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+
+  // Setup Swagger UI with proper options
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      tryItOutEnabled: true,
+    },
+    customSiteTitle: 'LinkedIn Scraper API Docs',
+    customCss: '.swagger-ui .topbar { display: none }',
+  });
+
+  // Serve OpenAPI JSON at /api/docs-json
+  app.use('/api/docs-json', (req, res) => {
+    res.json(document);
+  });
 
   // Port configuration (3000 to run alongside Flask on 5001)
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`Swagger docs available at: http://localhost:${port}/api/docs`);
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  logger.log(`Application is running on: http://localhost:${port}`, 'Bootstrap');
+  logger.log(`Swagger UI available at: http://localhost:${port}/api/docs`, 'Bootstrap');
+  logger.log(`OpenAPI JSON available at: http://localhost:${port}/api/docs-json`, 'Bootstrap');
 }
 bootstrap();
