@@ -235,6 +235,62 @@
 		}
 	}
 
+	async function downloadResumePdf() {
+		try {
+			const response = await fetch(`/api/jobs/${job.id}/resume/pdf`);
+
+			if (!response.ok) {
+				throw new Error(`Failed to download resume PDF: ${response.status}`);
+			}
+
+			// Get the blob from response
+			const blob = await response.blob();
+
+			// Create a download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `resume_${job.company.replace(/[^a-z0-9]/gi, '_')}_${job.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			showToastNotification('Resume PDF downloaded!');
+		} catch (error) {
+			console.error('Error downloading resume PDF:', error);
+			showToastNotification('Failed to download resume PDF');
+		}
+	}
+
+	async function downloadCoverLetterPdf() {
+		try {
+			const response = await fetch(`/api/jobs/${job.id}/cover-letter/pdf`);
+
+			if (!response.ok) {
+				throw new Error(`Failed to download cover letter PDF: ${response.status}`);
+			}
+
+			// Get the blob from response
+			const blob = await response.blob();
+
+			// Create a download link
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `cover_letter_${job.company.replace(/[^a-z0-9]/gi, '_')}_${job.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+
+			showToastNotification('Cover letter PDF downloaded!');
+		} catch (error) {
+			console.error('Error downloading cover letter PDF:', error);
+			showToastNotification('Failed to download cover letter PDF');
+		}
+	}
+
 	async function markAsApplied() {
 		try {
 			// Toggle behavior: if already applied, set to 0, otherwise set to 1
@@ -768,7 +824,16 @@
 
 		{#if job.resume}
 			<div class="section">
-				<h3>Generated Resume</h3>
+				<div class="section-header">
+					<h3>Generated Resume</h3>
+					<button
+						class="download-pdf-btn"
+						on:click={downloadResumePdf}
+						title="Download as PDF"
+					>
+						📥 Download PDF
+					</button>
+				</div>
 				<div class="generated-content">
 					{@html renderMarkdown(job.resume)}
 				</div>
@@ -777,7 +842,16 @@
 
 		{#if job.cover_letter}
 			<div class="section">
-				<h3>Generated Cover Letter</h3>
+				<div class="section-header">
+					<h3>Generated Cover Letter</h3>
+					<button
+						class="download-pdf-btn"
+						on:click={downloadCoverLetterPdf}
+						title="Download as PDF"
+					>
+						📥 Download PDF
+					</button>
+				</div>
 				<div class="generated-content">
 					{@html renderMarkdown(job.cover_letter)}
 				</div>
@@ -1098,6 +1172,42 @@
 		border-bottom: 1px solid #e1e5e9;
 		font-size: 1rem;
 		font-weight: 600;
+	}
+
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.75rem;
+	}
+
+	.section-header h3 {
+		margin-bottom: 0;
+		padding-bottom: 0;
+		border-bottom: none;
+	}
+
+	.download-pdf-btn {
+		background: #0a66c2;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		padding: 0.5rem 1rem;
+		font-size: 0.85rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+
+	.download-pdf-btn:hover {
+		background: #004182;
+	}
+
+	.download-pdf-btn:active {
+		transform: scale(0.98);
 	}
 
 	.job-description, .generated-content {
