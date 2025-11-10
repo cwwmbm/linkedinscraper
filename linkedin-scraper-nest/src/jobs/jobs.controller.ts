@@ -15,7 +15,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { JobsService } from './jobs.service';
 import { JobQueryDto } from './dto/job-query.dto';
 import { CreateJobDto } from './dto/create-job.dto';
