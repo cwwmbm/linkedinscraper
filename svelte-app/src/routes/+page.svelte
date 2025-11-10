@@ -240,12 +240,7 @@
 </script>
 
 <main class="container">
-	{#if loading}
-		<div class="loading">
-			<div class="spinner"></div>
-			<p>Loading jobs...</p>
-		</div>
-	{:else if error}
+	{#if error}
 		<div class="error">
 			<p>Error loading jobs: {error}</p>
 			<button on:click={fetchJobs} class="retry-btn">Retry</button>
@@ -321,6 +316,9 @@
 
 					<div class="job-count">
 						Showing {jobs.length} of {jobStats.total} jobs
+						{#if loading}
+							<span class="loading-spinner"></span>
+						{/if}
 					</div>
 				</div>
 			{/if}
@@ -329,7 +327,7 @@
 		<!-- Two-Panel Layout -->
 		<div class="main-content">
 			<div class="left-panel">
-				<JobList jobs={jobs} {selectedJob} on:selectJob={(e) => selectJob(e.detail)} on:jobUpdated={handleJobUpdate} />
+				<JobList jobs={jobs} {selectedJob} {loading} on:selectJob={(e) => selectJob(e.detail)} on:jobUpdated={handleJobUpdate} />
 			</div>
 			<div class="right-panel">
 				{#if selectedJob}
@@ -574,6 +572,19 @@
 		color: #666;
 		font-size: 0.9rem;
 		white-space: nowrap;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.loading-spinner {
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		border: 2px solid #f3f3f3;
+		border-top: 2px solid #0a66c2;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
 	}
 
 	.main-content {
@@ -614,23 +625,6 @@
 	.no-selection h3 {
 		margin-bottom: 0.5rem;
 		color: #333;
-	}
-
-	.loading {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 3rem;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid #f3f3f3;
-		border-top: 4px solid #0a66c2;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin-bottom: 1rem;
 	}
 
 	@keyframes spin {
