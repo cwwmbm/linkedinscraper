@@ -160,8 +160,7 @@
 			jobs = [...jobs];
 		}
 
-		// Refetch jobs and stats since job status may have changed
-		fetchJobs();
+		// Refetch stats since job status may have changed
 		fetchJobStats();
 	}
 
@@ -256,7 +255,7 @@
 		<div class="controls" class:collapsed={controlsCollapsed}>
 			<button class="collapse-toggle" on:click={() => controlsCollapsed = !controlsCollapsed}>
 				{controlsCollapsed ? '▼' : '▲'} Filters
-				<span class="job-count-inline">({jobs.length}/{jobStats.total >= 100 ? '100+' : jobStats.total})</span>
+				<span class="job-count-inline">({jobs.length}/{jobStats.total})</span>
 			</button>
 
 			{#if !controlsCollapsed}
@@ -321,7 +320,7 @@
 					</div>
 
 					<div class="job-count">
-						Showing {jobs.length} of {jobStats.total >= 100 ? '100+' : jobStats.total} jobs
+						Showing {jobs.length} of {jobStats.total} jobs
 					</div>
 				</div>
 			{/if}
