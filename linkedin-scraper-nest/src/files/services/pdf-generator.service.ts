@@ -4,6 +4,10 @@ import { Repository } from 'typeorm';
 import { Job } from '../../jobs/entities/job.entity';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
+import {
+  EMBEDDED_FONT_FAMILY,
+  getEmbeddedFontFace,
+} from '../utils/font.util';
 
 @Injectable()
 export class PdfGeneratorService {
@@ -120,6 +124,7 @@ export class PdfGeneratorService {
   private createResumeHtml(job: Job): string {
     // Convert markdown-style text to basic HTML
     const resumeHtml = this.markdownToHtml(job.resume);
+    const embeddedFontFace = getEmbeddedFontFace();
 
     return `
 <!DOCTYPE html>
@@ -129,6 +134,8 @@ export class PdfGeneratorService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resume - ${job.title} at ${job.company}</title>
   <style>
+    ${embeddedFontFace}
+
     * {
       margin: 0;
       padding: 0;
@@ -136,7 +143,7 @@ export class PdfGeneratorService {
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: '${EMBEDDED_FONT_FAMILY}', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.6;
       color: #333;
       background: #fff;
@@ -267,6 +274,7 @@ export class PdfGeneratorService {
    */
   private createCoverLetterHtml(job: Job): string {
     const coverLetterHtml = this.markdownToHtml(job.cover_letter);
+    const embeddedFontFace = getEmbeddedFontFace();
 
     return `
 <!DOCTYPE html>
@@ -276,6 +284,8 @@ export class PdfGeneratorService {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cover Letter - ${job.title} at ${job.company}</title>
   <style>
+    ${embeddedFontFace}
+
     * {
       margin: 0;
       padding: 0;
@@ -283,7 +293,7 @@ export class PdfGeneratorService {
     }
 
     body {
-      font-family: 'Georgia', serif;
+      font-family: '${EMBEDDED_FONT_FAMILY}', 'Georgia', serif;
       line-height: 1.8;
       color: #333;
       background: #fff;

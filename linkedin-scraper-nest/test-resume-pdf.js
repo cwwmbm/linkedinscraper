@@ -2,6 +2,7 @@ const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
+const { getEmbeddedFontFace } = require('./test-font');
 
 // Copy of the markdownToHtml function from the service
 function markdownToHtml(text) {
@@ -107,6 +108,7 @@ async function testResumeFromDb() {
   console.log('Saved converted HTML to: test-resume-converted.html\n');
 
   // Create full HTML document
+  const embeddedFontFace = getEmbeddedFontFace();
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -115,6 +117,8 @@ async function testResumeFromDb() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resume - ${job.title} at ${job.company}</title>
   <style>
+    ${embeddedFontFace}
+
     * {
       margin: 0;
       padding: 0;
@@ -122,7 +126,7 @@ async function testResumeFromDb() {
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'EmbeddedUbuntu', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       line-height: 1.6;
       color: #333;
       background: #fff;
@@ -253,19 +257,46 @@ async function testResumeFromDb() {
   // Generate PDF
   let browser;
   try {
-    console.log('Launching browser...');
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: {
-        width: 1280,
-        height: 720,
-      },
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
+    const overrideExecutable = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const launchArgs = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-crash-reporter',
+      '--disable-breakpad',
+      '--single-process',
+      '--no-zygote',
+      '--disable-features=Crashpad',
+      '--no-crashpad',
+    ];
+
+    const launchOptions = overrideExecutable
+      ? {
+          executablePath: overrideExecutable,
+          headless: true,
+          args: launchArgs,
+        }
+      : {
+          args: chromium.args,
+          defaultViewport: {
+            width: 1280,
+            height: 720,
+          },
+          executablePath: await chromium.executablePath(),
+          headless: true,
+        };
+
+    console.log('Launching browser with options:', launchOptions);
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    // Capture screenshot to compare with PDF output
+    const screenshot = await page.screenshot({ fullPage: true });
+    fs.writeFileSync('./test-resume-screenshot.png', screenshot);
+    console.log('Screenshot saved to ./test-resume-screenshot.png');
 
     const pdf = await page.pdf({
       format: 'A4',

@@ -1,16 +1,27 @@
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const fs = require('fs');
+const { getEmbeddedFontFace } = require('./test-font');
 
 async function testMinimalPdf() {
   console.log('Testing minimal PDF with no CSS...');
 
   // Absolutely minimal HTML - no CSS at all
+  const embeddedFontFace = getEmbeddedFontFace();
   const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <style>
+    ${embeddedFontFace}
+
+    body {
+      font-family: 'EmbeddedUbuntu', Arial, sans-serif;
+      color: #222;
+      padding: 40px;
+    }
+  </style>
 </head>
 <body>
   <h1>TEST HEADING</h1>
@@ -30,15 +41,36 @@ async function testMinimalPdf() {
 
   let browser;
   try {
-    console.log('Launching browser with args:', chromium.args);
-    console.log('Executable path:', await chromium.executablePath());
+    const overrideExecutable = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const launchArgs = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-crash-reporter',
+      '--disable-breakpad',
+      '--single-process',
+      '--no-zygote',
+      '--disable-features=Crashpad',
+      '--no-crashpad',
+    ];
 
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
+    const launchOptions = overrideExecutable
+      ? {
+          executablePath: overrideExecutable,
+          headless: true,
+          args: launchArgs,
+        }
+      : {
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+        };
+
+    console.log('Launching browser with options:', launchOptions);
+
+    browser = await puppeteer.launch(launchOptions);
 
     console.log('Browser launched');
 

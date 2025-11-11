@@ -1,10 +1,12 @@
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const fs = require('fs');
+const { getEmbeddedFontFace } = require('./test-font');
 
 async function generateTestPdf() {
   console.log('Starting PDF generation test...');
 
+  const embeddedFontFace = getEmbeddedFontFace();
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -12,8 +14,10 @@ async function generateTestPdf() {
   <meta charset="UTF-8">
   <title>Test PDF</title>
   <style>
+    ${embeddedFontFace}
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'EmbeddedUbuntu', Arial, sans-serif;
       padding: 40px;
       color: #333;
     }
@@ -70,16 +74,38 @@ async function generateTestPdf() {
   let browser;
 
   try {
-    console.log('Launching browser...');
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: {
-        width: 1280,
-        height: 720,
-      },
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
+    const overrideExecutable = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const launchArgs = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-crash-reporter',
+      '--disable-breakpad',
+      '--single-process',
+      '--no-zygote',
+      '--disable-features=Crashpad',
+      '--no-crashpad',
+    ];
+
+    const launchOptions = overrideExecutable
+      ? {
+          executablePath: overrideExecutable,
+          headless: true,
+          args: launchArgs,
+        }
+      : {
+          args: chromium.args,
+          defaultViewport: {
+            width: 1280,
+            height: 720,
+          },
+          executablePath: await chromium.executablePath(),
+          headless: true,
+        };
+
+    console.log('Launching browser with options:', launchOptions);
+    browser = await puppeteer.launch(launchOptions);
 
     console.log('Browser launched successfully');
 
@@ -90,6 +116,11 @@ async function generateTestPdf() {
       waitUntil: 'networkidle0',
     });
     console.log('HTML content set');
+
+    // Capture screenshot for quick visual verification
+    const screenshot = await page.screenshot({ fullPage: true });
+    fs.writeFileSync('./test-pdf-screenshot.png', screenshot);
+    console.log('Screenshot saved to ./test-pdf-screenshot.png');
 
     const pdf = await page.pdf({
       format: 'A4',
