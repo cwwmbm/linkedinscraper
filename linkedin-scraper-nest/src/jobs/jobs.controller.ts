@@ -10,9 +10,12 @@ import {
   Query,
   ParseIntPipe,
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { JobsService } from './jobs.service';
 import { JobQueryDto } from './dto/job-query.dto';
 import { CreateJobDto } from './dto/create-job.dto';
@@ -23,6 +26,7 @@ import { CoverLetterService } from '../ai/services/cover-letter.service';
 import { ResumeTailorService } from '../ai/services/resume-tailor.service';
 import { QueueService } from '../queue/queue.service';
 import { ManualJobCreatorService } from './services/manual-job-creator.service';
+import { PdfGeneratorService } from '../files/services/pdf-generator.service';
 import { AnalyzeJobDto, JobAnalysisResultDto } from '../ai/dto/job-analysis.dto';
 import { GenerateCoverLetterDto, CoverLetterResponseDto } from '../ai/dto/cover-letter.dto';
 import { TailorResumeDto, TailoredResumeResponseDto } from '../ai/dto/resume.dto';
@@ -37,6 +41,7 @@ export class JobsController {
     private readonly resumeTailorService: ResumeTailorService,
     private readonly queueService: QueueService,
     private readonly manualJobCreatorService: ManualJobCreatorService,
+    private readonly pdfGeneratorService: PdfGeneratorService,
   ) {}
 
   @Get()
@@ -244,6 +249,102 @@ The tailored resume is stored in the job's resume field.
   async getTailoredResume(@Param('id', ParseIntPipe) id: number) {
     const resume = await this.resumeTailorService.getTailoredResume(id);
     return { resume };
+  }
+
+  @Get(':id/resume/pdf')
+  @ApiOperation({
+    summary: 'Download tailored resume as PDF',
+    description: `Generate and download the tailored resume as a professionally formatted PDF document.
+
+**Features:**
+- Professional formatting with proper typography
+- Clean, ATS-friendly layout
+- Includes job title and company information in header
+- Converts markdown formatting to styled HTML
+
+**Requirements:**
+- Resume must be generated first (POST /api/jobs/:id/resume)
+
+**Note:** PDF generation may take a few seconds on first request.`
+  })
+  @ApiParam({ name: 'id', description: 'Job ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns PDF file',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Job or resume not found' })
+  async downloadResumePdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const job = await this.jobsService.findOne(id);
+    const pdfBuffer = await this.pdfGeneratorService.generateResumePdf(id);
+
+    const filename = `resume_${job.company.replace(/[^a-z0-9]/gi, '_')}_${job.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
+  @Get(':id/cover-letter/pdf')
+  @ApiOperation({
+    summary: 'Download cover letter as PDF',
+    description: `Generate and download the cover letter as a professionally formatted PDF document.
+
+**Features:**
+- Professional business letter format
+- Serif font (Georgia) for formal appearance
+- Includes date, company address, and greeting
+- Proper spacing and margins
+
+**Requirements:**
+- Cover letter must be generated first (POST /api/jobs/:id/cover-letter)
+
+**Note:** PDF generation may take a few seconds on first request.`
+  })
+  @ApiParam({ name: 'id', description: 'Job ID', type: Number })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns PDF file',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Job or cover letter not found' })
+  async downloadCoverLetterPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const job = await this.jobsService.findOne(id);
+    const pdfBuffer = await this.pdfGeneratorService.generateCoverLetterPdf(id);
+
+    const filename = `cover_letter_${job.company.replace(/[^a-z0-9]/gi, '_')}_${job.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
   }
 
   @Get(':id')

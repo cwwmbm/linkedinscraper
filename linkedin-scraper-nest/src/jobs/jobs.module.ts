@@ -7,12 +7,14 @@ import { JobsService } from './jobs.service';
 import { ManualJobCreatorService } from './services/manual-job-creator.service';
 import { AiModule } from '../ai/ai.module';
 import { QueueModule } from '../queue/queue.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Job, FilteredJob]),
     AiModule,
     QueueModule,
+    FilesModule,
   ],
   controllers: [JobsController],
   providers: [JobsService, ManualJobCreatorService],
