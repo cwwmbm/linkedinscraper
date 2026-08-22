@@ -84,7 +84,7 @@ The `config.json` file contains the configuration options for the scraper and th
 - `title_exclude`: An array of keywords to filter job postings based on their title. Discard jobs that have ANY of the word from 'title_words' in its title. Leave empty if you don't want to filter by title.
 - `company_exclude`: An array of keywords to filter job postings based on the company name. Discard jobs come from a certain company because life is too short to work for assholes.
 - `languages`: Script will auto-detect the language from the description. If the language is not in this list, the job will be discarded. Leave empty if you don't want to filter by language. Use "en" for English, "de" for German, "fr" for French, "es" for Spanish, etc. See documentation for langdetect for more details.
-- `timespan`: The time range for the job postings. "r604800" for the past week, "r84600" for the last 24 hours. Basically "r" plus 60 * 60 * 24 * <number of days>.
+- `timespan`: The time range for the job postings. "r604800" for the past week, "r86400" for the last 24 hours. Basically "r" plus 60 * 60 * 24 * <number of days>.
 - `jobs_tablename`: The name of the table in the SQLite database where the job postings will be stored.
 - `filtered_jobs_tablename`: The name of the table in the SQLite database where the filtered job postings will be stored.
 - `db_path`: The path to the SQLite database file.
