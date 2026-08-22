@@ -24,7 +24,7 @@
   "title_include": ["python", "developer", "backend", "BE", "engineer"],
   "company_exclude": ["ClickJobs.io"],
   "languages": ["en"],
-  "timespan": "r84600",
+  "timespan": "r86400",
   "jobs_tablename": "jobs",
   "filtered_jobs_tablename": "filtered_jobs",
   "db_path": "./data/my_database.db",
